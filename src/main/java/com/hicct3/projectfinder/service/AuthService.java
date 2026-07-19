@@ -4,7 +4,7 @@ import com.hicct3.projectfinder.dto.auth.*;
 import com.hicct3.projectfinder.entity.EmailVerification;
 import com.hicct3.projectfinder.entity.RefreshToken;
 import com.hicct3.projectfinder.entity.User;
-import com.hicct3.projectfinder.entity.VerificationType;
+import com.hicct3.projectfinder.entity.enums.VerificationType;
 import com.hicct3.projectfinder.global.CustomUserDetails;
 import com.hicct3.projectfinder.global.ErrorCode;
 import com.hicct3.projectfinder.global.GeneralException;

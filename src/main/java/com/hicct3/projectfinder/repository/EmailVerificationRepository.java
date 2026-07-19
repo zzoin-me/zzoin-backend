@@ -1,7 +1,7 @@
 package com.hicct3.projectfinder.repository;
 
 import com.hicct3.projectfinder.entity.EmailVerification;
-import com.hicct3.projectfinder.entity.VerificationType;
+import com.hicct3.projectfinder.entity.enums.VerificationType;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/api/univ")
+@RequestMapping("/api/univs")
 public class UnivController {
     private final UnivService univService;
 

@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/api/stack")
+@RequestMapping("/api/stacks")
 public class StackController {
     private final StackService stackService;
 

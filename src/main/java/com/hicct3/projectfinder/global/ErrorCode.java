@@ -42,7 +42,14 @@ public enum ErrorCode {
     STACK_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "이미 존재하는 스택입니다."),
 
     // Univ
-    UNIVERSITY_NOT_MATCHED(HttpStatus.BAD_REQUEST, "대학 id와 도메인이 일치하지 않습니다.");
+    UNIVERSITY_NOT_MATCHED(HttpStatus.BAD_REQUEST, "대학 id와 도메인이 일치하지 않습니다."),
+
+    // Project
+    PROJECT_NOT_FOUND(HttpStatus.BAD_REQUEST, "프로젝트를 찾을 수 없습니다."),
+    RECRUITMENT_EMPTY(HttpStatus.BAD_REQUEST, "모집 정보가 존재하지 않습니다."),
+    PROJECT_DELETED(HttpStatus.BAD_REQUEST, "삭제된 프로젝트입니다."),
+    PROJECT_ALREADY_DELETED(HttpStatus.BAD_REQUEST, "이미 삭제된 프로젝트입니다."),
+    AUTHOR_MISMATCHED(HttpStatus.BAD_REQUEST, "작성자가 일치하지 않습니다.");
 
     private final HttpStatus status;
     private final String message;

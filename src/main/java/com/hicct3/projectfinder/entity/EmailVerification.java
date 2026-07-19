@@ -1,5 +1,6 @@
 package com.hicct3.projectfinder.entity;
 
+import com.hicct3.projectfinder.entity.enums.VerificationType;
 import jakarta.persistence.*;
 import lombok.*;
 
