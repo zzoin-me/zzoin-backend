@@ -12,8 +12,9 @@ import java.util.List;
 @Builder
 @Getter
 @Setter
-public class UserProfileResponseDTO {
+public class MyProfileResponseDTO {
     private String name;
+    private String email;
     private String field;
     private String bio;
     private String profileUrl;

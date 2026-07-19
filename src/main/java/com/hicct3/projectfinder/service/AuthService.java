@@ -77,7 +77,7 @@ public class AuthService {
                     .build();
         } catch(AuthenticationException e)
         {
-            throw new GeneralException("인증에 실패했습니다.");
+            throw new GeneralException(ErrorCode.AUTHENTICATION_FAILED);
         }
 
     }
@@ -178,13 +178,13 @@ public class AuthService {
     {
         var lowerVerifyEmail = req.getVerifyEmail().trim().toLowerCase();
         var verification = emailVerificationRepository.findByEmailAndType(lowerVerifyEmail, VerificationType.SIGNUP)
-                .orElseThrow(()-> new GeneralException("이메일 인증 코드가 존재하지 않습니다."));
+                .orElseThrow(()-> new GeneralException(ErrorCode.EMAIL_VERIFICATION_NOT_FOUND));
 
         if(!verification.getCode().equals(req.getCode()))
-            throw new GeneralException("이메일 인증 코드가 일치하지 않습니다.");
+            throw new GeneralException(ErrorCode.EMAIL_CODE_MISMATCH);
 
         if(verification.getExpiredAt().isBefore(LocalDateTime.now()))
-            throw new GeneralException("이메일 인증 코드가 만료되었습니다.");
+            throw new GeneralException(ErrorCode.EMAIL_CODE_EXPIRED);
 
         emailVerificationRepository.delete(verification);
 

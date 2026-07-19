@@ -33,7 +33,7 @@ public class AuthController {
         return ApiResponse.onSuccess("회원가입 이메일 인증에 성공했습니다.", authService.verifySignupEmail(req));
     }
 
-    @Operation(summary = "이메일 전송")
+    @Operation(summary = "대학 이메일 전송")
     @PostMapping("/email/send")
     public ApiResponse<Void> sendEmail(Authentication auth, @RequestBody @Valid EmailSendRequestDTO req)
     {

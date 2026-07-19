@@ -1,10 +1,7 @@
 package com.hicct3.projectfinder.service;
 
 import com.hicct3.projectfinder.dto.stack.StackInfoResponseDTO;
-import com.hicct3.projectfinder.dto.user.UpdateProfileRequestDTO;
-import com.hicct3.projectfinder.dto.user.UpdateSchoolProfileRequestDTO;
-import com.hicct3.projectfinder.dto.user.UserProfileResponseDTO;
-import com.hicct3.projectfinder.dto.user.UserSchoolProfileResponseDTO;
+import com.hicct3.projectfinder.dto.user.*;
 import com.hicct3.projectfinder.global.ErrorCode;
 import com.hicct3.projectfinder.global.GeneralException;
 import com.hicct3.projectfinder.repository.StackRepository;
@@ -41,10 +38,10 @@ public class UserService {
     }
 
     @Transactional
-    public UserProfileResponseDTO getMyProfile(Long userId) {
+    public MyProfileResponseDTO getMyProfile(Long userId) {
         var user = userRepository.findById(userId).orElseThrow(()->new GeneralException(ErrorCode.USER_NOT_FOUND));
 
-        return UserProfileResponseDTO.builder()
+        return MyProfileResponseDTO.builder()
                 .name(user.getNickName())
                 .email(user.getEmail())
                 .field(user.getField())
