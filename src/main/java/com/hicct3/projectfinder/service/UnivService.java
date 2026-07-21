@@ -39,7 +39,7 @@ public class UnivService {
         return UnivInfoResponseDTO.builder()
                 .id(univ.getId())
                 .name(univ.getName())
-                .domain(u.getDomain())
+                .domain(univ.getDomain())
                 .build();
     }
 }
