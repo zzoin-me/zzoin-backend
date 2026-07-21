@@ -91,7 +91,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/signup/email/verify").permitAll()
                         .requestMatchers("/api/auth/refreshToken").permitAll()
                         .requestMatchers("/api/univs/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/projects").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/projects", "/api/projects/{projectId}").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/stacks").hasRole("ADMIN")
                         .requestMatchers("/api/projects/**").hasRole("VERIFIED")
                         .anyRequest().authenticated()
