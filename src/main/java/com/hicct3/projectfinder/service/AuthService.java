@@ -115,13 +115,21 @@ public class AuthService {
             throw new GeneralException(ErrorCode.DUPLICATE_VERIFIED_EMAIL);
         }
 
+        String domain = getDomain(lowerEmail);
+        var schoolDomainOpt = schoolDomainRepository.findByDomain(domain);
+
         var user = User.builder()
                 .nickName(req.getNickName())
                 .email(lowerEmail)
                 .password(passwordEncoder.encode(req.getPassword()))
-                .verified(false)
+                .verified(schoolDomainOpt.isPresent())
                 .admin(false)
                 .build();
+
+        if (schoolDomainOpt.isPresent()) {
+            user.setVerifiedEmail(lowerEmail);
+            user.setSchoolDomain(schoolDomainOpt.get());
+        }
 
         userRepository.save(user);
 
@@ -349,4 +357,3 @@ public class AuthService {
         return code.toString();
     }
 }
-
