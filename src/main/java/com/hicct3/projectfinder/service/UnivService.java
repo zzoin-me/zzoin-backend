@@ -25,6 +25,7 @@ public class UnivService {
                 .map(u -> UnivInfoResponseDTO.builder()
                         .id(u.getId())
                         .name(u.getName())
+                        .domain(u.getDomain())
                         .build()).toList();
 
         return UnivInfoListResponseDTO.builder()
@@ -38,7 +39,7 @@ public class UnivService {
         return UnivInfoResponseDTO.builder()
                 .id(univ.getId())
                 .name(univ.getName())
+                .domain(u.getDomain())
                 .build();
     }
 }
-

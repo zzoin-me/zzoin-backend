@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface SchoolDomainRepository extends JpaRepository<SchoolDomain, Long> {
     boolean existsByDomain(String domain);
+    Optional<SchoolDomain> findByDomain(String domain);
 }

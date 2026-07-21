@@ -12,4 +12,5 @@ import lombok.Setter;
 public class UnivInfoResponseDTO {
     private Long id;
     private String name;
+    private String domain;
 }
