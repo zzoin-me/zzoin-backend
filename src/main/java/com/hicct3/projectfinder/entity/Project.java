@@ -65,4 +65,8 @@ public class Project {
     @Column(nullable = false)
     private ProjectStatus status;
 
+    public Boolean isRecruitmentClosed()
+    {
+        return status != ProjectStatus.RECRUITING || recruitmentDeadline.isBefore(LocalDateTime.now());
+    }
 }

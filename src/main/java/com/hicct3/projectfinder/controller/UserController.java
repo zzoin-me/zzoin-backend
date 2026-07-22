@@ -1,12 +1,17 @@
 package com.hicct3.projectfinder.controller;
 
+import com.hicct3.projectfinder.dto.project.myproject.MyApplicationPreviewResponseDTO;
+import com.hicct3.projectfinder.dto.project.myproject.MyProjectPreviewResponseDTO;
 import com.hicct3.projectfinder.dto.user.*;
 import com.hicct3.projectfinder.global.ApiResponse;
 import com.hicct3.projectfinder.global.CustomUserDetails;
+import com.hicct3.projectfinder.service.ProjectService;
 import com.hicct3.projectfinder.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,6 +20,28 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/users")
 public class UserController {
     private final UserService userService;
+    private final ProjectService projectService;
+
+    @Operation(summary = "내가 지원한 프로젝트 조회")
+    @GetMapping("/me/applications")
+    public ApiResponse<Page<MyApplicationPreviewResponseDTO>> getMyApplications(Authentication authentication, Pageable pageable)
+    {
+        CustomUserDetails userDetails =
+                (CustomUserDetails) authentication.getPrincipal();
+        return ApiResponse.onSuccess(projectService.getMyApplications(userDetails.getId(), pageable));
+    }
+
+    @Operation(summary = "내 프로젝트 조회")
+    @GetMapping("/me/projects")
+    public ApiResponse<Page<MyProjectPreviewResponseDTO>> getMyProjects(
+            Authentication authentication,
+            Pageable pageable
+    )
+    {
+        CustomUserDetails userDetails =
+                (CustomUserDetails) authentication.getPrincipal();
+        return ApiResponse.onSuccess(projectService.getMyProjects(userDetails.getId(), pageable));
+    }
 
     @Operation(summary = "userId로 프로필 조회")
     @GetMapping("/{userId}")
