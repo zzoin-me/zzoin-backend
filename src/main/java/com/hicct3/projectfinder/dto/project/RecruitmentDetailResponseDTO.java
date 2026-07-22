@@ -15,7 +15,8 @@ import lombok.*;
 public class RecruitmentDetailResponseDTO {
     private Long id;
     private String name;
-    private Integer count;
+    private Integer applicantCount;
+    private Integer recruitmentCount;
     private String qualification;
     private String preferred;
 
@@ -24,7 +25,8 @@ public class RecruitmentDetailResponseDTO {
         return RecruitmentDetailResponseDTO.builder()
                 .id(projectRecruitment.getId())
                 .name(projectRecruitment.getName())
-                .count(projectRecruitment.getRecruitmentCount())
+                .applicantCount(projectRecruitment.getApplicantCount())
+                .recruitmentCount(projectRecruitment.getRecruitmentCount())
                 .qualification(projectRecruitment.getQualification())
                 .preferred(projectRecruitment.getPreferred())
                 .build();

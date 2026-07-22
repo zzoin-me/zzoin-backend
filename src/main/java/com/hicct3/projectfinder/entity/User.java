@@ -51,6 +51,14 @@ public class User {
     @Column(nullable = false)
     private Boolean admin;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Double ratingAvg = 0.0;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer ratingCount = 0;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "school_domain_id")
     private SchoolDomain schoolDomain;

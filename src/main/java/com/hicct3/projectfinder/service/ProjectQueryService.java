@@ -45,7 +45,7 @@ public class ProjectQueryService {
     {
         return projectRepository.searchProjects(sort, keyword, pageable).map(
                 project -> ProjectPreviewResponseDTO.from(project,
-                        projectRecruitmentRepository.findByProject(project).stream().toList())
+                        projectRecruitmentRepository.findByProject(project))
         );
     }
 
