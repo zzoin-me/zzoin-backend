@@ -57,6 +57,9 @@ public class AuthService {
 
             var user = ((CustomUserDetails) auth.getPrincipal()).getUser();
 
+            if(user.isDeleted())
+                throw new GeneralException(ErrorCode.USER_WITHDRAWN);
+
             //토큰 생성
             String accessToken = jwtProvider.createAccessToken(user.getUserId());
             String refreshToken = jwtProvider.createRefreshToken(user.getUserId());
@@ -87,6 +90,83 @@ public class AuthService {
     public void logout(Long userId) {
         refreshTokenRepository.deleteByUserId(userId);
     }
+
+    //회원탈퇴
+    @Transactional
+    public void withdraw(Long userId, WithDrawEmailVerifyRequestDTO req) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorCode.USER_NOT_FOUND));
+
+        if (Boolean.TRUE.equals(user.isDeleted())) {
+            throw new GeneralException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        var verification = emailVerificationRepository.findByEmailAndType(user.getEmail(), VerificationType.WITHDRAW)
+                .orElseThrow(() -> new GeneralException(ErrorCode.EMAIL_VERIFICATION_NOT_FOUND));
+
+        if (!verification.getCode().equals(req.getCode())) {
+            throw new GeneralException(ErrorCode.EMAIL_CODE_MISMATCH);
+        }
+
+        if (verification.getExpiredAt().isBefore(LocalDateTime.now())) {
+            throw new GeneralException(ErrorCode.EMAIL_CODE_EXPIRED);
+        }
+
+        if (verification.getUser() == null || !Objects.equals(verification.getUser().getUserId(), userId)) {
+            throw new GeneralException(ErrorCode.INVALID_USER);
+        }
+
+        String originalEmail = user.getEmail();
+
+        refreshTokenRepository.deleteByUserId(userId);
+        emailVerificationRepository.delete(verification);
+
+        user.withDraw();
+
+        sendWithdrawCompletedEmail(originalEmail);
+    }
+
+    //회원 탈퇴 이메일 전송
+    @Transactional
+    public void sendWithDrawEmail(Long userId)
+    {
+        var user = userRepository.findById(userId).orElseThrow(()->new GeneralException(ErrorCode.USER_NOT_FOUND));
+        if (Boolean.TRUE.equals(user.isDeleted())) {
+            throw new GeneralException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        String code = createCode();
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(user.getEmail());
+        message.setSubject("회원탈퇴 확인 인증번호");
+        message.setText("회원탈퇴를 진행하려면 아래 인증번호를 입력해주세요.\n"
+                + "인증번호는 [" + code + "] 입니다.\n"
+                + "인증번호는 5분간 유효합니다.\n\n"
+                + "본인이 요청한 것이 아니라면 이 메일을 무시해주세요.");
+
+        emailVerificationRepository.findByEmailAndType(user.getEmail(), VerificationType.WITHDRAW)
+                .ifPresentOrElse(
+                        verification -> verification.update(code, user, LocalDateTime.now().plusMinutes(5)),
+                        () -> emailVerificationRepository.save(
+                                new EmailVerification(
+                                        user.getEmail(),
+                                        VerificationType.WITHDRAW,
+                                        code,
+                                        user,
+                                        LocalDateTime.now().plusMinutes(5)
+                                )
+                        )
+                );
+
+        try {
+            mailSender.send(message);
+        } catch (MailException e) {
+            throw new GeneralException(ErrorCode.EMAIL_SEND_FAILED);
+        }
+    }
+
 
     //회원가입
     @Transactional
@@ -214,6 +294,10 @@ public class AuthService {
         if (!savedToken.getUserId().equals(userId)) {
             throw new GeneralException("토큰 정보가 일치하지 않습니다.");
         }
+
+        var user = userRepository.findById(userId).orElseThrow(()->new GeneralException(ErrorCode.USER_NOT_FOUND));
+        if(user.isDeleted())
+            throw new GeneralException(ErrorCode.USER_WITHDRAWN);
 
 
         var accessToken = jwtProvider.createAccessToken(savedToken.getUserId());
@@ -355,5 +439,20 @@ public class AuthService {
         }
 
         return code.toString();
+    }
+
+    private void sendWithdrawCompletedEmail(String email) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(email);
+        message.setSubject("회원탈퇴가 완료되었습니다.");
+        message.setText("Zzoin 회원탈퇴가 완료되었습니다.\n"
+                + "그동안 이용해주셔서 감사합니다.");
+
+        try {
+            mailSender.send(message);
+        } catch (MailException ignored) {
+
+        }
     }
 }
