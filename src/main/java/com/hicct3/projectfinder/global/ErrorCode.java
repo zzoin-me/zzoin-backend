@@ -19,6 +19,7 @@ public enum ErrorCode {
     TOKEN_MISMATCH(HttpStatus.BAD_REQUEST, "토큰 정보가 일치하지 않습니다."),
     SIGNUP_EMAIL_MISMATCH(HttpStatus.BAD_REQUEST, "회원가입 인증 이메일과 요청 이메일이 일치하지 않습니다."),
     INVALID_USER(HttpStatus.BAD_REQUEST, "유효하지 않은 사용자입니다."),
+    USER_WITHDRAWN(HttpStatus.BAD_REQUEST, "탈퇴한 사용자입니다."),
 
     // User
     USER_NOT_FOUND(HttpStatus.BAD_REQUEST, "사용자가 존재하지 않습니다."),

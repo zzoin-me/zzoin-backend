@@ -77,6 +77,25 @@ public class AuthController {
         return ApiResponse.onSuccess("로그아웃에 성공했습니다.", null);
     }
 
+
+    @Operation(summary = "탈퇴 이메일 전송")
+    @PostMapping("/withdraw")
+    public ApiResponse<EmailVerifyResponseDTO> withdrawEmail(Authentication auth)
+    {
+        var userId = ((CustomUserDetails) auth.getPrincipal()).getId();
+        authService.sendWithDrawEmail(userId);
+        return ApiResponse.onSuccess("탈퇴 이메일 전송에 성공했습니다.", null);
+    }
+
+    @Operation(summary = "회원 탈퇴")
+    @DeleteMapping("/withdraw")
+    public ApiResponse<EmailVerifyResponseDTO> withdrawEmail(Authentication auth, WithDrawEmailVerifyRequestDTO req)
+    {
+        var userId = ((CustomUserDetails) auth.getPrincipal()).getId();
+        authService.withdraw(userId, req);
+        return ApiResponse.onSuccess("회원 탈퇴에 성공했습니다", null);
+    }
+
     @Operation(summary = "토큰 갱신")
     @PostMapping("/refreshToken")
     public ApiResponse<RefreshTokenResponseDTO> refreshToken(@RequestBody @Valid RefreshTokenRequestDTO req)
