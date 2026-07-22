@@ -29,6 +29,7 @@ public class ProjectDetailResponseDTO {
     private GoalType goalType;
     private String imageUrl;
     private ProjectStatus projectStatus;
+    private String authorNickname;
     private List<RecruitmentDetailResponseDTO> recruitments;
 
     public static ProjectDetailResponseDTO from(Project project, List<RecruitmentDetailResponseDTO> recruitments)
@@ -45,6 +46,7 @@ public class ProjectDetailResponseDTO {
                 .goalType(project.getGoal())
                 .imageUrl(project.getImageUrl())
                 .projectStatus(project.getStatus())
+                .authorNickname(project.getAuthor().getNickName())
                 .recruitments(recruitments)
                 .build();
     }
