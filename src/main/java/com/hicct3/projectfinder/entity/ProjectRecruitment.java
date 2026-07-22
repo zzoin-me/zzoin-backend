@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.antlr.v4.runtime.misc.Interval;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name="projectRecruitments")
 @Getter
@@ -20,7 +22,7 @@ public class ProjectRecruitment {
     private String name;
 
     @Column(nullable = false)
-    private Integer currentCount;
+    private Integer applicantCount;
 
     @Column(nullable = false)
     private Integer recruitmentCount;
@@ -30,6 +32,9 @@ public class ProjectRecruitment {
 
     @Column(nullable = false)
     private String preferred;
+
+    @Column
+    private LocalDateTime deletedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id")

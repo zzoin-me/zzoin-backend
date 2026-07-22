@@ -22,8 +22,8 @@ public class ProjectPreviewResponseDTO {
     private LocalDateTime recruitmentDeadline;
     private List<String> recruitments;
     private ProjectStatus status;
-    private int currentCount;
-    private int totalCount;
+    private int applicantCount;
+    private int recruitmentCount;
     private String imageUrl;
 
 
@@ -34,8 +34,8 @@ public class ProjectPreviewResponseDTO {
                 .description(project.getDescription())
                 .recruitmentDeadline(project.getRecruitmentDeadline())
                 .recruitments(recruitments.stream().map(ProjectRecruitment::getName).toList())
-                .currentCount(recruitments.stream().mapToInt(ProjectRecruitment::getCurrentCount).sum())
-                .totalCount(recruitments.stream().mapToInt(ProjectRecruitment::getRecruitmentCount).sum())
+                .applicantCount(recruitments.stream().mapToInt(ProjectRecruitment::getApplicantCount).sum())
+                .recruitmentCount(recruitments.stream().mapToInt(ProjectRecruitment::getRecruitmentCount).sum())
                 .imageUrl(project.getImageUrl())
                 .status(project.getStatus())
                 .build();

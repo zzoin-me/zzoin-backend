@@ -1,9 +1,6 @@
 package com.hicct3.projectfinder.dto.project;
 
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.*;
 
 @AllArgsConstructor
@@ -12,6 +9,9 @@ import lombok.*;
 @Getter
 @Setter
 public class UpdateRecruitmentRequestDTO {
+    //요청에 id없으면 새로 추가
+    private Long recruitmentId;
+
     @Size(min = 2, max = 30, message = "모집 이름은 2자 이상 30자 이하여야 합니다.")
     private String name;
 

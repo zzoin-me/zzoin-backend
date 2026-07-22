@@ -3,6 +3,7 @@ package com.hicct3.projectfinder.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,8 +49,19 @@ public class User {
     @Column
     private String profileUrl;
 
+    @Column
+    private LocalDateTime deletedAt;
+
     @Column(nullable = false)
     private Boolean admin;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Double ratingAvg = 0.0;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer ratingCount = 0;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "school_domain_id")
@@ -63,4 +75,30 @@ public class User {
             inverseJoinColumns = @JoinColumn(name = "stack_id")
     )
     private List<Stack> stacks = new ArrayList<>();
+
+    //계정 삭제 처리
+    public void withDraw()
+    {
+        this.deletedAt = LocalDateTime.now();
+
+        this.nickName = "DELETED_USER_" + this.userId;
+        this.email = "DELETED_EMAIL_" + this.userId + "@deleted.local";
+        this.verifiedEmail = null;
+
+        this.password = "";
+        this.verified = false;
+        this.grade = null;
+        this.major = null;
+        this.field = null;
+        this.bio = null;
+        this.profileUrl = null;
+        this.schoolDomain = null;
+
+        this.stacks.clear();
+    }
+
+    public Boolean isDeleted()
+    {
+        return this.deletedAt != null;
+    }
 }

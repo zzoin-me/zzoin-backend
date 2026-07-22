@@ -1,9 +1,14 @@
 package com.hicct3.projectfinder.controller;
 
+import com.hicct3.projectfinder.dto.application.ApplyProjectRequestDTO;
+import com.hicct3.projectfinder.dto.application.DeleteProjectRequestDTO;
+import com.hicct3.projectfinder.dto.application.ProjectApplicantsResponseDTO;
+import com.hicct3.projectfinder.dto.application.UpdateApplicantStatusDTO;
 import com.hicct3.projectfinder.dto.project.*;
 import com.hicct3.projectfinder.entity.enums.SortType;
 import com.hicct3.projectfinder.global.ApiResponse;
 import com.hicct3.projectfinder.global.CustomUserDetails;
+import com.hicct3.projectfinder.service.ProjectApplicationService;
 import com.hicct3.projectfinder.service.ProjectQueryService;
 import com.hicct3.projectfinder.service.ProjectService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,6 +26,47 @@ import org.springframework.web.bind.annotation.*;
 public class ProjectController {
     private final ProjectService projectService;
     private final ProjectQueryService projectQueryService;
+    private final ProjectApplicationService projectApplicationService;
+
+    @Operation(summary = "지원자 상태 변경")
+    @PatchMapping("applications/{applicationId}")
+    public ApiResponse<Void> updateApplicantStatus(Authentication authentication, @PathVariable Long applicationId, @RequestBody @Valid UpdateApplicantStatusDTO req) {
+        CustomUserDetails userDetails =
+                (CustomUserDetails) authentication.getPrincipal();
+
+        projectApplicationService.updateApplicantStatus(userDetails.getId(), applicationId, req);
+        return ApiResponse.onSuccess("지원자 상태 변경에 성공했습니다.", null);
+    }
+
+    @Operation(summary = "프로젝트 지원")
+    @PostMapping("/apply")
+    public ApiResponse<Void> applyProject(Authentication authentication,  @RequestBody @Valid ApplyProjectRequestDTO req) {
+        CustomUserDetails userDetails =
+                (CustomUserDetails) authentication.getPrincipal();
+
+        projectApplicationService.applyProject(userDetails.getId(), req);
+        return ApiResponse.onSuccess("프로젝트 지원에 성공했습니다.", null);
+    }
+
+    @Operation(summary = "프로젝트 지원 취소")
+    @DeleteMapping("/apply")
+    public ApiResponse<Void> deleteApplication(Authentication authentication,  @RequestBody @Valid DeleteProjectRequestDTO req) {
+        CustomUserDetails userDetails =
+                (CustomUserDetails) authentication.getPrincipal();
+
+        projectApplicationService.deleteApplication(userDetails.getId(), req);
+        return ApiResponse.onSuccess("프로젝트 지원 취소에 성공했습니다.", null);
+    }
+
+    @Operation(summary = "프로젝트 지원자 목록 조회")
+    @GetMapping("{projectId}/applicants")
+    public ApiResponse<ProjectApplicantsResponseDTO> getApplicants(Authentication authentication, @PathVariable Long projectId) {
+        CustomUserDetails userDetails =
+                (CustomUserDetails) authentication.getPrincipal();
+
+        return ApiResponse.onSuccess(projectApplicationService.getApplicants(userDetails.getId(), projectId));
+    }
+
 
     @Operation(summary = "프로젝트 목록 검색")
     @GetMapping

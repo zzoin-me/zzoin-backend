@@ -19,6 +19,7 @@ public enum ErrorCode {
     TOKEN_MISMATCH(HttpStatus.BAD_REQUEST, "토큰 정보가 일치하지 않습니다."),
     SIGNUP_EMAIL_MISMATCH(HttpStatus.BAD_REQUEST, "회원가입 인증 이메일과 요청 이메일이 일치하지 않습니다."),
     INVALID_USER(HttpStatus.BAD_REQUEST, "유효하지 않은 사용자입니다."),
+    USER_WITHDRAWN(HttpStatus.BAD_REQUEST, "탈퇴한 사용자입니다."),
 
     // User
     USER_NOT_FOUND(HttpStatus.BAD_REQUEST, "사용자가 존재하지 않습니다."),
@@ -46,10 +47,21 @@ public enum ErrorCode {
 
     // Project
     PROJECT_NOT_FOUND(HttpStatus.BAD_REQUEST, "프로젝트를 찾을 수 없습니다."),
-    RECRUITMENT_EMPTY(HttpStatus.BAD_REQUEST, "모집 정보가 존재하지 않습니다."),
     PROJECT_DELETED(HttpStatus.BAD_REQUEST, "삭제된 프로젝트입니다."),
     PROJECT_ALREADY_DELETED(HttpStatus.BAD_REQUEST, "이미 삭제된 프로젝트입니다."),
-    AUTHOR_MISMATCHED(HttpStatus.BAD_REQUEST, "작성자가 일치하지 않습니다.");
+    AUTHOR_MISMATCHED(HttpStatus.BAD_REQUEST, "작성자가 일치하지 않습니다."),
+
+    // Recruitment
+    RECRUITMENT_NOT_FOUND(HttpStatus.BAD_REQUEST, "모집 정보를 찾을 수 없습니다."),
+    RECRUITMENT_CLOSED(HttpStatus.BAD_REQUEST, "모집이 마감된 모집입니다."),
+    RECRUITMENT_EMPTY(HttpStatus.BAD_REQUEST, "모집 정보가 존재하지 않습니다."),
+    AUTHOR_NOT_APPLICABLE(HttpStatus.BAD_REQUEST, "작성자가 지원할 수 없습니다."),
+    ALREADY_APPLIED(HttpStatus.BAD_REQUEST, "이미 지원한 모집입니다."),
+    APPLICATION_NOT_FOUND(HttpStatus.BAD_REQUEST, "지원서를 찾을 수 없습니다."),
+
+
+    //Applications
+    APPLICATION_ALREADY_PROCESSED(HttpStatus.BAD_REQUEST, "이미 처리된 지원입니다."),;
 
     private final HttpStatus status;
     private final String message;
