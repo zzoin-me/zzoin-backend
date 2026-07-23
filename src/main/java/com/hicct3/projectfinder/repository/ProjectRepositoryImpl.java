@@ -43,7 +43,7 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
         where = where.and(keywordContains(keyword));
         where = where.and(maxDaysContains(maxDays));
         where = where.and(fieldContains(field));
-        where = where.and(countBetween(minCount, maxCount));
+        where = where.and(countBetween(minCount, maxCount, field));
 
         List<Project> content = queryFactory
                 .selectFrom(project)
@@ -100,7 +100,7 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
         );
     }
 
-    private BooleanExpression countBetween(Integer minCount, Integer maxCount) {
+    private BooleanExpression countBetween(Integer minCount, Integer maxCount, String field) {
         if (minCount == null && maxCount == null) {
             return null;
         }
@@ -108,12 +108,18 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
         QProject project = QProject.project;
         QProjectRecruitment recruitment = QProjectRecruitment.projectRecruitment;
 
+        BooleanExpression conditions = recruitment.project.id.eq(project.id)
+                .and(recruitment.deletedAt.isNull());
+
+        if (field != null && !field.isBlank()) {
+            conditions = conditions.and(recruitment.name.eq(field));
+        }
+
         var sumExpression = Expressions.asNumber(
                 JPAExpressions
                         .select(recruitment.recruitmentCount.sum())
                         .from(recruitment)
-                        .where(recruitment.project.id.eq(project.id)
-                                .and(recruitment.deletedAt.isNull()))
+                        .where(conditions)
         );
 
         if (minCount != null && maxCount != null) {
