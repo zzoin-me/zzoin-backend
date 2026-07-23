@@ -9,7 +9,12 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name="projects")
+@Table(
+    name="projects",
+    indexes = {
+        @Index(name = "idx_recruitment_deadline", columnList = "recruitment_deadline")
+    }
+)
 @Getter
 @Setter
 @Builder
