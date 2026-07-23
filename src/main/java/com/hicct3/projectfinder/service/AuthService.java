@@ -337,12 +337,8 @@ public class AuthService {
         );
 
         String emailDomain = getDomain(lowerEmail);
-        boolean isUnivEmail = schoolDomainRepository.findAll().stream()
-            .anyMatch(sd -> emailDomain.equals(sd.getDomain())
-                          || emailDomain.endsWith("." + sd.getDomain()));
-        if (!isUnivEmail) {
+        if (!schoolDomainRepository.existsByMatchingDomain(emailDomain))
             throw new GeneralException(ErrorCode.NOT_UNIVERSITY_EMAIL);
-        }
 
         User user = userRepository.findById(userId)
                 .orElseThrow(()->new GeneralException(ErrorCode.USER_NOT_FOUND));
