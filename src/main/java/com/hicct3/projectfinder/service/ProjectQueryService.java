@@ -41,13 +41,12 @@ public class ProjectQueryService {
     }
 
     @Transactional
-    public Page<ProjectPreviewResponseDTO> getProjectList(SortType sort, String keyword, Pageable pageable)
+    public Page<ProjectPreviewResponseDTO> getProjectList(SortType sort, String keyword, String field, Integer maxDays, Integer minCount, Integer maxCount, Pageable pageable)
     {
-        return projectRepository.searchProjects(sort, keyword, pageable).map(
+        return projectRepository.searchProjects(sort, keyword, field, maxDays, minCount, maxCount, pageable).map(
                 project -> ProjectPreviewResponseDTO.from(project,
                         projectRecruitmentRepository.findByProject(project))
         );
     }
 
 }
-

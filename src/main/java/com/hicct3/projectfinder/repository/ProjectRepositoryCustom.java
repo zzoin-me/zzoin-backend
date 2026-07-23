@@ -9,6 +9,10 @@ public interface ProjectRepositoryCustom {
     Page<Project> searchProjects(
             SortType sortType,
             String keyword,
+            String field,
+            Integer maxDays,
+            Integer minCount,
+            Integer maxCount,
             Pageable pageable
     );
 }
