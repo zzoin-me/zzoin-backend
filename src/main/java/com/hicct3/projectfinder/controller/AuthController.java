@@ -89,7 +89,7 @@ public class AuthController {
 
     @Operation(summary = "회원 탈퇴")
     @DeleteMapping("/withdraw")
-    public ApiResponse<EmailVerifyResponseDTO> withdrawEmail(Authentication auth, WithDrawEmailVerifyRequestDTO req)
+    public ApiResponse<EmailVerifyResponseDTO> withdrawEmail(Authentication auth, @RequestBody WithDrawEmailVerifyRequestDTO req)
     {
         var userId = ((CustomUserDetails) auth.getPrincipal()).getId();
         authService.withdraw(userId, req);
