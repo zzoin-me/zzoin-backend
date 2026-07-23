@@ -336,13 +336,9 @@ public class AuthService {
                 }
         );
 
-
-
-        //대학 이메일인지 확인
-        if(!schoolDomainRepository.existsByDomain(getDomain(lowerEmail)))
-        {
+        String emailDomain = getDomain(lowerEmail);
+        if (!schoolDomainRepository.existsByMatchingDomain(emailDomain))
             throw new GeneralException(ErrorCode.NOT_UNIVERSITY_EMAIL);
-        }
 
         User user = userRepository.findById(userId)
                 .orElseThrow(()->new GeneralException(ErrorCode.USER_NOT_FOUND));
@@ -401,7 +397,9 @@ public class AuthService {
         user.setVerifiedEmail(lowerVerifyEmail);
 
         var schoolDomain = schoolDomainRepository.findById(req.getUnivId()).orElseThrow(()-> new GeneralException(ErrorCode.UNIVERSITY_NOT_FOUND));
-        if(!schoolDomain.getDomain().equals(getDomain(lowerVerifyEmail)))
+        String emailDomain = getDomain(lowerVerifyEmail);
+        if (!emailDomain.equals(schoolDomain.getDomain())
+            && !emailDomain.endsWith("." + schoolDomain.getDomain()))
             throw new GeneralException(ErrorCode.UNIVERSITY_NOT_MATCHED);
 
         user.setSchoolDomain(schoolDomain);
@@ -410,25 +408,10 @@ public class AuthService {
 
     private String getDomain(String email) {
         int atIndex = email.indexOf("@");
-
         if (atIndex == -1 || atIndex == email.length() - 1) {
-            throw new GeneralException("올바르지 않은 이메일 형식입니다.");
-        }
-
-        String domain = email.substring(atIndex + 1);
-        String[] parts = domain.split("\\.");
-
-        // *.ac.kr 처리
-        if (domain.endsWith(".ac.kr") && parts.length >= 3) {
-            return parts[parts.length - 3] + ".ac.kr";
-        }
-
-        // 일반 도메인
-        if (parts.length > 2) {
-            return parts[parts.length - 2] + "." + parts[parts.length - 1];
-        }
-
-        return domain;
+                throw new GeneralException("올바르지 않은 이메일 형식입니다.");
+            }
+        return email.substring(atIndex + 1);
     }
 
     private String createCode() {
