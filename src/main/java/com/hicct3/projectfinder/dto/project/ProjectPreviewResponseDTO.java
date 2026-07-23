@@ -25,7 +25,7 @@ public class ProjectPreviewResponseDTO {
     private int applicantCount;
     private int recruitmentCount;
     private String imageUrl;
-
+    private String authorNickname;
 
     public static ProjectPreviewResponseDTO from(Project project, List<ProjectRecruitment> recruitments) {
         return ProjectPreviewResponseDTO.builder()
@@ -38,6 +38,7 @@ public class ProjectPreviewResponseDTO {
                 .recruitmentCount(recruitments.stream().mapToInt(ProjectRecruitment::getRecruitmentCount).sum())
                 .imageUrl(project.getImageUrl())
                 .status(project.getStatus())
+                .authorNickname(project.getAuthor().getNickName())
                 .build();
     }
 }

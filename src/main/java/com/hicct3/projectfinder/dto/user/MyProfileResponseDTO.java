@@ -19,6 +19,7 @@ public class MyProfileResponseDTO {
     private String bio;
     private String profileUrl;
     private Boolean verified;
+    private String verifiedEmail;
 
     private List<StackInfoResponseDTO> stackInfoList;
 

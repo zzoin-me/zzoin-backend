@@ -48,6 +48,7 @@ public class UserService {
                 .bio(user.getBio())
                 .profileUrl(user.getProfileUrl())
                 .verified(user.getVerified())
+                .verifiedEmail(user.getVerifiedEmail())
                 .stackInfoList(user.getStacks().stream().
                         map(x->StackInfoResponseDTO.builder()
                                 .id(x.getId())

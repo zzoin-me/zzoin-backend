@@ -73,12 +73,15 @@ public class ProjectController {
     public ApiResponse<Page<ProjectPreviewResponseDTO>> getProjects(
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "LATEST") String sort,
-            @RequestParam(required = false) Long fieldId,
+            @RequestParam(required = false) String field,
+            @RequestParam(required = false) Integer maxDays,
+            @RequestParam(required = false) Integer minCount,
+            @RequestParam(required = false) Integer maxCount,
             Pageable pageable
     )
     {
         SortType sortType = SortType.from(sort);
-        return ApiResponse.onSuccess(projectQueryService.getProjectList(sortType, keyword, pageable));
+        return ApiResponse.onSuccess(projectQueryService.getProjectList(sortType, keyword, field, maxDays, minCount, maxCount, pageable));
     }
 
     @Operation(summary = "프로젝트 상세 조회")
