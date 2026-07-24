@@ -7,6 +7,7 @@ import com.hicct3.projectfinder.dto.project.myproject.MyApplicationPreviewRespon
 import com.hicct3.projectfinder.dto.project.myproject.MyProjectPreviewResponseDTO;
 import com.hicct3.projectfinder.entity.Project;
 import com.hicct3.projectfinder.entity.ProjectRecruitment;
+import com.hicct3.projectfinder.entity.enums.ApplicationStatus;
 import com.hicct3.projectfinder.entity.enums.ProjectStatus;
 import com.hicct3.projectfinder.global.ErrorCode;
 import com.hicct3.projectfinder.global.GeneralException;
@@ -47,13 +48,16 @@ public class ProjectService {
     }
 
     @Transactional
-    public Page<MyApplicationPreviewResponseDTO> getMyApplications(Long userId, Pageable pageable)
+    public Page<MyApplicationPreviewResponseDTO> getMyApplications(Long userId, ApplicationStatus status, Pageable pageable)
     {
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorCode.USER_NOT_FOUND));
 
-        return projectApplicationRepository.findAllByUser(user, pageable)
-                .map(MyApplicationPreviewResponseDTO::from);
+        var applications = status != null
+                ? projectApplicationRepository.findAllByUserAndStatus(user, status, pageable)
+                : projectApplicationRepository.findAllByUser(user, pageable);
+
+        return applications.map(MyApplicationPreviewResponseDTO::from);
     }
 
     @Transactional

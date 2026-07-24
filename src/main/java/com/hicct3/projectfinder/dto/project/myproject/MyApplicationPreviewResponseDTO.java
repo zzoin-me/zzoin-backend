@@ -21,6 +21,7 @@ public class MyApplicationPreviewResponseDTO {
     private String projectTitle;
     private String appliedRecruitmentName;
     private ApplicationStatus status;
+    private LocalDateTime createdAt;
 
 
     public static MyApplicationPreviewResponseDTO from(ProjectApplication application) {
@@ -30,6 +31,7 @@ public class MyApplicationPreviewResponseDTO {
                 .projectTitle(application.getRecruitment().getProject().getTitle())
                 .appliedRecruitmentName(application.getRecruitment().getName())
                 .status(application.getStatus())
+                .createdAt(application.getCreatedAt())
                 .build();
     }
 }
