@@ -3,6 +3,7 @@ package com.hicct3.projectfinder.controller;
 import com.hicct3.projectfinder.dto.project.myproject.MyApplicationPreviewResponseDTO;
 import com.hicct3.projectfinder.dto.project.myproject.MyProjectPreviewResponseDTO;
 import com.hicct3.projectfinder.dto.user.*;
+import com.hicct3.projectfinder.entity.enums.ApplicationStatus;
 import com.hicct3.projectfinder.global.ApiResponse;
 import com.hicct3.projectfinder.global.CustomUserDetails;
 import com.hicct3.projectfinder.service.ProjectService;
@@ -24,11 +25,14 @@ public class UserController {
 
     @Operation(summary = "내가 지원한 프로젝트 조회")
     @GetMapping("/me/applications")
-    public ApiResponse<Page<MyApplicationPreviewResponseDTO>> getMyApplications(Authentication authentication, Pageable pageable)
+    public ApiResponse<Page<MyApplicationPreviewResponseDTO>> getMyApplications(
+            Authentication authentication,
+            @RequestParam(required = false) ApplicationStatus status,
+            Pageable pageable)
     {
         CustomUserDetails userDetails =
                 (CustomUserDetails) authentication.getPrincipal();
-        return ApiResponse.onSuccess(projectService.getMyApplications(userDetails.getId(), pageable));
+        return ApiResponse.onSuccess(projectService.getMyApplications(userDetails.getId(), status, pageable));
     }
 
     @Operation(summary = "내 프로젝트 조회")

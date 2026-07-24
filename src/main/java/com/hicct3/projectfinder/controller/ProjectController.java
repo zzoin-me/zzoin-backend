@@ -120,7 +120,7 @@ public class ProjectController {
 
     @Operation(summary = "프로젝트 상태 변경")
     @PatchMapping("/{projectId}/status")
-    private ApiResponse<Void> updateProjectStatus(Authentication authentication, @PathVariable Long projectId, UpdateProjectStatusRequestDTO req) {
+    private ApiResponse<Void> updateProjectStatus(Authentication authentication, @PathVariable Long projectId, @Valid @RequestBody UpdateProjectStatusRequestDTO req) {
         CustomUserDetails userDetails =
                 (CustomUserDetails) authentication.getPrincipal();
 

@@ -4,6 +4,7 @@ import com.hicct3.projectfinder.entity.Project;
 import com.hicct3.projectfinder.entity.ProjectApplication;
 import com.hicct3.projectfinder.entity.ProjectRecruitment;
 import com.hicct3.projectfinder.entity.User;
+import com.hicct3.projectfinder.entity.enums.ApplicationStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -23,4 +24,6 @@ public interface ProjectApplicationRepository extends JpaRepository<ProjectAppli
     List<ProjectApplication> findAllByProject(Project project);
 
     Page<ProjectApplication> findAllByUser(User user, Pageable pageable);
+
+    Page<ProjectApplication> findAllByUserAndStatus(User user, ApplicationStatus status, Pageable pageable);
 }
