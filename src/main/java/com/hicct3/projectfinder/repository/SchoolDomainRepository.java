@@ -8,9 +8,6 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 
 public interface SchoolDomainRepository extends JpaRepository<SchoolDomain, Long> {
-    boolean existsByDomain(String domain);
-    Optional<SchoolDomain> findByDomain(String domain);
-
     @Query("""
     SELECT CASE
     WHEN COUNT(s) > 0
@@ -18,6 +15,13 @@ public interface SchoolDomainRepository extends JpaRepository<SchoolDomain, Long
     END FROM SchoolDomain s
     WHERE :emailDomain = s.domain OR :emailDomain
     LIKE CONCAT('%.', s.domain)
-""")
+    """)
     boolean existsByMatchingDomain(@Param("emailDomain") String emailDomain);
+
+    @Query("""
+    SELECT s FROM SchoolDomain s
+    WHERE :emailDomain = s.domain OR :emailDomain
+    LIKE CONCAT('%.', s.domain)
+    """)
+    Optional<SchoolDomain> findByMatchingDomain(@Param("emailDomain") String emailDomain);
 }

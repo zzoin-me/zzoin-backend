@@ -196,7 +196,7 @@ public class AuthService {
         }
 
         String domain = getDomain(lowerEmail);
-        var schoolDomainOpt = schoolDomainRepository.findByDomain(domain);
+        var schoolDomainOpt = schoolDomainRepository.findByMatchingDomain(domain);
 
         var user = User.builder()
                 .nickName(req.getNickName())
