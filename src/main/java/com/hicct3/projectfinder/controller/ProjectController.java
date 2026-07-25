@@ -5,6 +5,8 @@ import com.hicct3.projectfinder.dto.application.DeleteProjectRequestDTO;
 import com.hicct3.projectfinder.dto.application.ProjectApplicantsResponseDTO;
 import com.hicct3.projectfinder.dto.application.UpdateApplicantStatusDTO;
 import com.hicct3.projectfinder.dto.project.*;
+import com.hicct3.projectfinder.entity.enums.GoalType;
+import com.hicct3.projectfinder.entity.enums.RecruitmentCategory;
 import com.hicct3.projectfinder.entity.enums.SortType;
 import com.hicct3.projectfinder.global.ApiResponse;
 import com.hicct3.projectfinder.global.CustomUserDetails;
@@ -18,6 +20,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 
 @RequiredArgsConstructor
@@ -73,15 +77,25 @@ public class ProjectController {
     public ApiResponse<Page<ProjectPreviewResponseDTO>> getProjects(
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "LATEST") String sort,
-            @RequestParam(required = false) String field,
+            @RequestParam(required = false) RecruitmentCategory category,
+            @RequestParam(required = false) String name,
             @RequestParam(required = false) Integer maxDays,
             @RequestParam(required = false) Integer minCount,
             @RequestParam(required = false) Integer maxCount,
+            @RequestParam(required = false) GoalType goal,
+            @RequestParam(required = false, defaultValue = "false") Boolean recruitingOnly,
             Pageable pageable
     )
     {
         SortType sortType = SortType.from(sort);
-        return ApiResponse.onSuccess(projectQueryService.getProjectList(sortType, keyword, field, maxDays, minCount, maxCount, pageable));
+        return ApiResponse.onSuccess(projectQueryService.getProjectList(sortType, keyword, category, name, maxDays, minCount, maxCount, goal, recruitingOnly, pageable));
+    }
+
+    @Operation(summary = "카테고리별 프로젝트 수")
+    @GetMapping("/category-counts")
+    public ApiResponse<Map<RecruitmentCategory, Long>> getCategoryCounts()
+    {
+        return ApiResponse.onSuccess(projectQueryService.countProjectsPerCategory());
     }
 
     @Operation(summary = "프로젝트 상세 조회")
