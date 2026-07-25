@@ -3,7 +3,9 @@ package com.hicct3.projectfinder.service;
 import com.hicct3.projectfinder.dto.project.*;
 import com.hicct3.projectfinder.entity.Project;
 import com.hicct3.projectfinder.entity.ProjectRecruitment;
+import com.hicct3.projectfinder.entity.enums.GoalType;
 import com.hicct3.projectfinder.entity.enums.ProjectStatus;
+import com.hicct3.projectfinder.entity.enums.RecruitmentCategory;
 import com.hicct3.projectfinder.entity.enums.SortType;
 import com.hicct3.projectfinder.global.ErrorCode;
 import com.hicct3.projectfinder.global.GeneralException;
@@ -20,6 +22,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -41,12 +44,18 @@ public class ProjectQueryService {
     }
 
     @Transactional
-    public Page<ProjectPreviewResponseDTO> getProjectList(SortType sort, String keyword, String field, Integer maxDays, Integer minCount, Integer maxCount, Pageable pageable)
+    public Page<ProjectPreviewResponseDTO> getProjectList(SortType sort, String keyword, RecruitmentCategory category, String name, Integer maxDays, Integer minCount, Integer maxCount, GoalType goal, Boolean recruitingOnly, Pageable pageable)
     {
-        return projectRepository.searchProjects(sort, keyword, field, maxDays, minCount, maxCount, pageable).map(
+        return projectRepository.searchProjects(sort, keyword, category, name, maxDays, minCount, maxCount, goal, recruitingOnly, pageable).map(
                 project -> ProjectPreviewResponseDTO.from(project,
                         projectRecruitmentRepository.findByProject(project))
         );
+    }
+
+    @Transactional
+    public Map<RecruitmentCategory, Long> countProjectsPerCategory()
+    {
+        return projectRepository.countProjectsPerCategory();
     }
 
 }
