@@ -1,5 +1,6 @@
 package com.hicct3.projectfinder.dto.project;
 
+import com.hicct3.projectfinder.entity.enums.RecruitmentCategory;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
@@ -14,6 +15,8 @@ public class UpdateRecruitmentRequestDTO {
 
     @Size(min = 2, max = 30, message = "모집 이름은 2자 이상 30자 이하여야 합니다.")
     private String name;
+
+    private RecruitmentCategory category;
 
     @Min(0)
     @Max(100)
