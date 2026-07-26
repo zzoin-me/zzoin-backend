@@ -62,6 +62,13 @@ public class ProjectController {
         return ApiResponse.onSuccess("프로젝트 지원 취소에 성공했습니다.", null);
     }
 
+    @Operation(summary = "카테고리별 프로젝트 수")
+    @GetMapping("/category-counts")
+    public ApiResponse<Map<RecruitmentCategory, Long>> getCategoryCounts()
+    {
+        return ApiResponse.onSuccess(projectQueryService.countProjectsPerCategory());
+    }
+
     @Operation(summary = "프로젝트 지원자 목록 조회")
     @GetMapping("{projectId}/applicants")
     public ApiResponse<ProjectApplicantsResponseDTO> getApplicants(Authentication authentication, @PathVariable Long projectId) {
@@ -70,7 +77,6 @@ public class ProjectController {
 
         return ApiResponse.onSuccess(projectApplicationService.getApplicants(userDetails.getId(), projectId));
     }
-
 
     @Operation(summary = "프로젝트 목록 검색")
     @GetMapping
@@ -89,13 +95,6 @@ public class ProjectController {
     {
         SortType sortType = SortType.from(sort);
         return ApiResponse.onSuccess(projectQueryService.getProjectList(sortType, keyword, category, name, maxDays, minCount, maxCount, goal, recruitingOnly, pageable));
-    }
-
-    @Operation(summary = "카테고리별 프로젝트 수")
-    @GetMapping("/category-counts")
-    public ApiResponse<Map<RecruitmentCategory, Long>> getCategoryCounts()
-    {
-        return ApiResponse.onSuccess(projectQueryService.countProjectsPerCategory());
     }
 
     @Operation(summary = "프로젝트 상세 조회")
