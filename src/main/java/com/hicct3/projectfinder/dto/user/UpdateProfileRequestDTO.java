@@ -22,5 +22,6 @@ public class UpdateProfileRequestDTO {
 
     private String profileUrl;
 
+    @Size(max = 7, message = "스택은 최대 7개까지 선택할 수 있습니다.")
     private List<Long> stackIds;
 }
