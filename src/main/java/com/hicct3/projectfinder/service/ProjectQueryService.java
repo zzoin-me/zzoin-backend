@@ -1,11 +1,8 @@
 package com.hicct3.projectfinder.service;
 
 import com.hicct3.projectfinder.dto.project.*;
-import com.hicct3.projectfinder.entity.Project;
-import com.hicct3.projectfinder.entity.ProjectRecruitment;
 import com.hicct3.projectfinder.entity.enums.GoalType;
-import com.hicct3.projectfinder.entity.enums.ProjectStatus;
-import com.hicct3.projectfinder.entity.enums.RecruitmentCategory;
+import com.hicct3.projectfinder.entity.enums.JobCategoryCode;
 import com.hicct3.projectfinder.entity.enums.SortType;
 import com.hicct3.projectfinder.global.ErrorCode;
 import com.hicct3.projectfinder.global.GeneralException;
@@ -16,12 +13,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Map;
 
 @Service
@@ -44,7 +38,7 @@ public class ProjectQueryService {
     }
 
     @Transactional
-    public Page<ProjectPreviewResponseDTO> getProjectList(SortType sort, String keyword, RecruitmentCategory category, String name, Integer maxDays, Integer minCount, Integer maxCount, GoalType goal, Boolean recruitingOnly, Pageable pageable)
+    public Page<ProjectPreviewResponseDTO> getProjectList(SortType sort, String keyword, JobCategoryCode category, String name, Integer maxDays, Integer minCount, Integer maxCount, GoalType goal, Boolean recruitingOnly, Pageable pageable)
     {
         return projectRepository.searchProjects(sort, keyword, category, name, maxDays, minCount, maxCount, goal, recruitingOnly, pageable).map(
                 project -> ProjectPreviewResponseDTO.from(project,
@@ -53,7 +47,7 @@ public class ProjectQueryService {
     }
 
     @Transactional
-    public Map<RecruitmentCategory, Long> countProjectsPerCategory()
+    public Map<JobCategoryCode, Long> countProjectsPerCategory()
     {
         return projectRepository.countProjectsPerCategory();
     }

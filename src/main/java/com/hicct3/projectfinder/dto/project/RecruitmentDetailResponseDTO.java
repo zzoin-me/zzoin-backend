@@ -1,7 +1,7 @@
 package com.hicct3.projectfinder.dto.project;
 
 import com.hicct3.projectfinder.entity.ProjectRecruitment;
-import com.hicct3.projectfinder.entity.enums.RecruitmentCategory;
+import com.hicct3.projectfinder.entity.enums.JobCategoryCode;
 import lombok.*;
 
 @AllArgsConstructor
@@ -12,7 +12,7 @@ import lombok.*;
 public class RecruitmentDetailResponseDTO {
     private Long id;
     private String name;
-    private RecruitmentCategory category;
+    private JobCategoryCode category;
     private Integer applicantCount;
     private Integer recruitmentCount;
     private String qualification;
@@ -22,8 +22,8 @@ public class RecruitmentDetailResponseDTO {
     {
         return RecruitmentDetailResponseDTO.builder()
                 .id(projectRecruitment.getId())
-                .name(projectRecruitment.getName())
-                .category(projectRecruitment.getCategory())
+                .category(projectRecruitment.getJobRole().getJobCategory().getCategoryCode())
+                .name(projectRecruitment.getJobRole().getName())
                 .applicantCount(projectRecruitment.getApplicantCount())
                 .recruitmentCount(projectRecruitment.getRecruitmentCount())
                 .qualification(projectRecruitment.getQualification())

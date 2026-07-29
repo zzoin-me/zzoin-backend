@@ -1,5 +1,6 @@
 package com.hicct3.projectfinder.entity;
 
+import com.hicct3.projectfinder.dto.project.CreateProjectRequestDTO;
 import com.hicct3.projectfinder.entity.enums.CollaborationType;
 import com.hicct3.projectfinder.entity.enums.GoalType;
 import com.hicct3.projectfinder.entity.enums.ProjectStatus;
@@ -73,5 +74,24 @@ public class Project {
     public Boolean isRecruitmentClosed()
     {
         return status != ProjectStatus.RECRUITING || recruitmentDeadline.isBefore(LocalDateTime.now());
+    }
+
+    public static Project create(CreateProjectRequestDTO req, User user) {
+        return Project.builder()
+                .title(req.getTitle())
+                .description(req.getDescription())
+                .collaborationType(req.getCollaborationType())
+                .communicationTool(req.getCommunicationTool())
+                .meetingSchedule(req.getMeetingSchedule())
+                .period(req.getPeriod())
+                .recruitmentDeadline(req.getRecruitmentDeadline())
+                .goal(req.getGoalType())
+                .imageUrl(req.getImageUrl())
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .deletedAt(null)
+                .author(user)
+                .status(ProjectStatus.RECRUITING)
+                .build();
     }
 }

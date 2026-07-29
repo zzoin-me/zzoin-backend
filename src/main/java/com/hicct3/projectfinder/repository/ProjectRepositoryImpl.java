@@ -4,8 +4,8 @@ import com.hicct3.projectfinder.entity.Project;
 import com.hicct3.projectfinder.entity.QProject;
 import com.hicct3.projectfinder.entity.QProjectRecruitment;
 import com.hicct3.projectfinder.entity.enums.GoalType;
+import com.hicct3.projectfinder.entity.enums.JobCategoryCode;
 import com.hicct3.projectfinder.entity.enums.ProjectStatus;
-import com.hicct3.projectfinder.entity.enums.RecruitmentCategory;
 import com.hicct3.projectfinder.entity.enums.SortType;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.OrderSpecifier;
@@ -35,7 +35,7 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
     public Page<Project> searchProjects(
             SortType sortType,
             String keyword,
-            RecruitmentCategory category,
+            JobCategoryCode category,
             String name,
             Integer maxDays,
             Integer minCount,
@@ -76,21 +76,21 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
     }
 
     @Override
-    public Map<RecruitmentCategory, Long> countProjectsPerCategory() {
+    public Map<JobCategoryCode, Long> countProjectsPerCategory() {
         QProjectRecruitment recruitment = QProjectRecruitment.projectRecruitment;
         QProject project = QProject.project;
 
         List<Tuple> rows = queryFactory
-                .select(recruitment.category, recruitment.project.id.countDistinct())
+                .select(recruitment.jobRole.jobCategory.categoryCode, recruitment.project.id.countDistinct())
                 .from(recruitment)
                 .join(recruitment.project, project)
                 .where(recruitment.deletedAt.isNull().and(project.deletedAt.isNull()))
-                .groupBy(recruitment.category)
+                .groupBy(recruitment.jobRole.jobCategory.categoryCode)
                 .fetch();
 
-        Map<RecruitmentCategory, Long> map = new EnumMap<>(RecruitmentCategory.class);
+        Map<JobCategoryCode, Long> map = new EnumMap<>(JobCategoryCode.class);
         for (Tuple t : rows) {
-            RecruitmentCategory cat = t.get(recruitment.category);
+            JobCategoryCode cat = t.get(recruitment.jobRole.jobCategory.categoryCode);
             Long cnt = t.get(recruitment.project.id.countDistinct());
             if (cat != null && cnt != null) {
                 map.put(cat, cnt);
@@ -118,7 +118,7 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
         );
     }
 
-    private BooleanExpression recruitmentContains(RecruitmentCategory category, String name) {
+    private BooleanExpression recruitmentContains(JobCategoryCode category, String name) {
         if (category == null && (name == null || name.isBlank())) {
             return null;
         }
@@ -127,10 +127,10 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
 
         BooleanExpression cond = recruitment.deletedAt.isNull();
         if (category != null) {
-            cond = cond.and(recruitment.category.eq(category));
+            cond = cond.and(recruitment.jobRole.jobCategory.categoryCode.eq(category));
         }
         if (name != null && !name.isBlank()) {
-            cond = cond.and(recruitment.name.eq(name));
+            cond = cond.and(recruitment.jobRole.name.eq(name));
         }
 
         return project.id.in(
@@ -141,7 +141,7 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
         );
     }
 
-    private BooleanExpression countBetween(Integer minCount, Integer maxCount, RecruitmentCategory category, String name) {
+    private BooleanExpression countBetween(Integer minCount, Integer maxCount, JobCategoryCode category, String name) {
         if (minCount == null && maxCount == null) {
             return null;
         }
@@ -153,10 +153,10 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
                 .and(recruitment.deletedAt.isNull());
 
         if (category != null) {
-            conditions = conditions.and(recruitment.category.eq(category));
+            conditions = conditions.and(recruitment.jobRole.jobCategory.categoryCode.eq(category));
         }
         if (name != null && !name.isBlank()) {
-            conditions = conditions.and(recruitment.name.eq(name));
+            conditions = conditions.and(recruitment.jobRole.name.eq(name));
         }
 
         var sumExpression = Expressions.asNumber(
