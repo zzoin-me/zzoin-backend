@@ -1,8 +1,8 @@
 package com.hicct3.projectfinder.entity;
 
+import com.hicct3.projectfinder.entity.enums.RecruitmentCategory;
 import jakarta.persistence.*;
 import lombok.*;
-import org.antlr.v4.runtime.misc.Interval;
 
 import java.time.LocalDateTime;
 
@@ -20,6 +20,10 @@ public class ProjectRecruitment {
 
     @Column(nullable = false)
     private String name;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private RecruitmentCategory category;
 
     @Column(nullable = false)
     private Integer applicantCount;

@@ -9,6 +9,8 @@ import com.hicct3.projectfinder.entity.Project;
 import com.hicct3.projectfinder.entity.ProjectRecruitment;
 import com.hicct3.projectfinder.entity.enums.ApplicationStatus;
 import com.hicct3.projectfinder.entity.enums.ProjectStatus;
+import com.hicct3.projectfinder.entity.enums.RecruitmentCategory;
+import com.hicct3.projectfinder.entity.enums.RecruitmentRole;
 import com.hicct3.projectfinder.global.ErrorCode;
 import com.hicct3.projectfinder.global.GeneralException;
 import com.hicct3.projectfinder.repository.ProjectApplicationRepository;
@@ -88,14 +90,18 @@ public class ProjectService {
         var savedProject = projectRepository.save(project);
 
         req.getRecruitments().forEach(x->
-                projectRecruitmentRepository.save(ProjectRecruitment.builder()
-                        .name(x.getName())
-                        .recruitmentCount(x.getCount())
-                        .qualification(x.getQualification())
-                        .preferred(x.getPreferred())
-                        .applicantCount(0)
-                        .project(savedProject)
-                        .build()));
+        {
+            validateRecruitmentRole(x.getCategory(), x.getName());
+            projectRecruitmentRepository.save(ProjectRecruitment.builder()
+                    .name(x.getName())
+                    .category(x.getCategory())
+                    .recruitmentCount(x.getCount())
+                    .qualification(x.getQualification())
+                    .preferred(x.getPreferred())
+                    .applicantCount(0)
+                    .project(savedProject)
+                    .build());
+        });
 
     }
 
@@ -153,9 +159,11 @@ public class ProjectService {
             Set<Long> requestedRecruitmentIds = new HashSet<>();
 
             for (var x : req.getRecruitments()) {
+                validateRecruitmentRole(x.getCategory(), x.getName());
                 if (x.getRecruitmentId() == null) {
                     ProjectRecruitment newRecruitment = ProjectRecruitment.builder()
                             .name(x.getName())
+                            .category(x.getCategory())
                             .applicantCount(0)
                             .recruitmentCount(x.getCount())
                             .qualification(x.getQualification())
@@ -175,6 +183,7 @@ public class ProjectService {
                 requestedRecruitmentIds.add(recruitment.getId());
 
                 recruitment.setName(x.getName());
+                recruitment.setCategory(x.getCategory());
                 recruitment.setRecruitmentCount(x.getCount());
                 recruitment.setQualification(x.getQualification());
                 recruitment.setPreferred(x.getPreferred());
@@ -216,6 +225,19 @@ public class ProjectService {
             throw new GeneralException(ErrorCode.AUTHOR_MISMATCHED);
 
         project.setStatus(req.getStatus());
+    }
+
+    private void validateRecruitmentRole(RecruitmentCategory category, String name) {
+        if (category == null || category == RecruitmentCategory.ETC) {
+            return;
+        }
+        if (name == null || name.isBlank()) {
+            throw new GeneralException(ErrorCode.INVALID_RECRUITMENT_ROLE);
+        }
+        var allowed = RecruitmentRole.displayNamesByCategory(category);
+        if (!allowed.contains(name)) {
+            throw new GeneralException(ErrorCode.INVALID_RECRUITMENT_ROLE);
+        }
     }
 }
 

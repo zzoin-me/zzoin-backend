@@ -8,7 +8,8 @@ import org.springframework.data.domain.Sort;
 @RequiredArgsConstructor
 public enum SortType {
 
-    LATEST(Sort.by(Sort.Direction.DESC, "createdAt"));
+    LATEST(Sort.by(Sort.Direction.DESC, "createdAt")),
+    DEADLINE(Sort.by(Sort.Direction.ASC, "recruitmentDeadline"));
 
     private final Sort sort;
 

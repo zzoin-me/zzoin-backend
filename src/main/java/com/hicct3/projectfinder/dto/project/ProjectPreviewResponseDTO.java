@@ -2,9 +2,8 @@ package com.hicct3.projectfinder.dto.project;
 
 import com.hicct3.projectfinder.entity.Project;
 import com.hicct3.projectfinder.entity.ProjectRecruitment;
-import com.hicct3.projectfinder.entity.enums.CollaborationType;
-import com.hicct3.projectfinder.entity.enums.GoalType;
 import com.hicct3.projectfinder.entity.enums.ProjectStatus;
+import com.hicct3.projectfinder.entity.enums.RecruitmentCategory;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -21,6 +20,7 @@ public class ProjectPreviewResponseDTO {
     private String description;
     private LocalDateTime recruitmentDeadline;
     private List<String> recruitments;
+    private List<RecruitmentCategory> categories;
     private ProjectStatus status;
     private int applicantCount;
     private int recruitmentCount;
@@ -34,6 +34,7 @@ public class ProjectPreviewResponseDTO {
                 .description(project.getDescription())
                 .recruitmentDeadline(project.getRecruitmentDeadline())
                 .recruitments(recruitments.stream().map(ProjectRecruitment::getName).toList())
+                .categories(recruitments.stream().map(ProjectRecruitment::getCategory).distinct().toList())
                 .applicantCount(recruitments.stream().mapToInt(ProjectRecruitment::getApplicantCount).sum())
                 .recruitmentCount(recruitments.stream().mapToInt(ProjectRecruitment::getRecruitmentCount).sum())
                 .imageUrl(project.getImageUrl())
