@@ -3,8 +3,11 @@ package com.hicct3.projectfinder.repository;
 import com.hicct3.projectfinder.entity.Project;
 import com.hicct3.projectfinder.entity.QProject;
 import com.hicct3.projectfinder.entity.QProjectRecruitment;
+import com.hicct3.projectfinder.entity.enums.GoalType;
 import com.hicct3.projectfinder.entity.enums.ProjectStatus;
+import com.hicct3.projectfinder.entity.enums.RecruitmentCategory;
 import com.hicct3.projectfinder.entity.enums.SortType;
+import com.querydsl.core.Tuple;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
@@ -18,7 +21,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 
 @Repository
 @RequiredArgsConstructor
@@ -30,10 +35,13 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
     public Page<Project> searchProjects(
             SortType sortType,
             String keyword,
-            String field,
+            RecruitmentCategory category,
+            String name,
             Integer maxDays,
             Integer minCount,
             Integer maxCount,
+            GoalType goal,
+            Boolean recruitingOnly,
             Pageable pageable
     ) {
         QProject project = QProject.project;
@@ -42,8 +50,10 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
 
         where = where.and(keywordContains(keyword));
         where = where.and(maxDaysContains(maxDays));
-        where = where.and(fieldContains(field));
-        where = where.and(countBetween(minCount, maxCount, field));
+        where = where.and(recruitmentContains(category, name));
+        where = where.and(countBetween(minCount, maxCount, category, name));
+        where = where.and(goalContains(goal));
+        where = where.and(recruitingOnlyContains(recruitingOnly));
 
         List<Project> content = queryFactory
                 .selectFrom(project)
@@ -65,6 +75,30 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
         return new PageImpl<>(content, pageable, total != null ? total : 0);
     }
 
+    @Override
+    public Map<RecruitmentCategory, Long> countProjectsPerCategory() {
+        QProjectRecruitment recruitment = QProjectRecruitment.projectRecruitment;
+        QProject project = QProject.project;
+
+        List<Tuple> rows = queryFactory
+                .select(recruitment.category, recruitment.project.id.countDistinct())
+                .from(recruitment)
+                .join(recruitment.project, project)
+                .where(recruitment.deletedAt.isNull().and(project.deletedAt.isNull()))
+                .groupBy(recruitment.category)
+                .fetch();
+
+        Map<RecruitmentCategory, Long> map = new EnumMap<>(RecruitmentCategory.class);
+        for (Tuple t : rows) {
+            RecruitmentCategory cat = t.get(recruitment.category);
+            Long cnt = t.get(recruitment.project.id.countDistinct());
+            if (cat != null && cnt != null) {
+                map.put(cat, cnt);
+            }
+        }
+        return map;
+    }
+
     private BooleanExpression keywordContains(String keyword) {
         if (keyword == null || keyword.isBlank()) {
             return null;
@@ -84,23 +118,30 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
         );
     }
 
-    private BooleanExpression fieldContains(String field) {
-        if (field == null || field.isBlank()) {
+    private BooleanExpression recruitmentContains(RecruitmentCategory category, String name) {
+        if (category == null && (name == null || name.isBlank())) {
             return null;
         }
         QProject project = QProject.project;
         QProjectRecruitment recruitment = QProjectRecruitment.projectRecruitment;
 
+        BooleanExpression cond = recruitment.deletedAt.isNull();
+        if (category != null) {
+            cond = cond.and(recruitment.category.eq(category));
+        }
+        if (name != null && !name.isBlank()) {
+            cond = cond.and(recruitment.name.eq(name));
+        }
+
         return project.id.in(
                 JPAExpressions
                         .select(recruitment.project.id)
                         .from(recruitment)
-                        .where(recruitment.name.eq(field)
-                                .and(recruitment.deletedAt.isNull()))
+                        .where(cond)
         );
     }
 
-    private BooleanExpression countBetween(Integer minCount, Integer maxCount, String field) {
+    private BooleanExpression countBetween(Integer minCount, Integer maxCount, RecruitmentCategory category, String name) {
         if (minCount == null && maxCount == null) {
             return null;
         }
@@ -111,8 +152,11 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
         BooleanExpression conditions = recruitment.project.id.eq(project.id)
                 .and(recruitment.deletedAt.isNull());
 
-        if (field != null && !field.isBlank()) {
-            conditions = conditions.and(recruitment.name.eq(field));
+        if (category != null) {
+            conditions = conditions.and(recruitment.category.eq(category));
+        }
+        if (name != null && !name.isBlank()) {
+            conditions = conditions.and(recruitment.name.eq(name));
         }
 
         var sumExpression = Expressions.asNumber(
@@ -131,6 +175,20 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
         }
     }
 
+    private BooleanExpression goalContains(GoalType goal) {
+        if (goal == null) {
+            return null;
+        }
+        return QProject.project.goal.eq(goal);
+    }
+
+    private BooleanExpression recruitingOnlyContains(Boolean recruitingOnly) {
+        if (recruitingOnly == null || !recruitingOnly) {
+            return null;
+        }
+        return QProject.project.status.eq(ProjectStatus.RECRUITING);
+    }
+
     private OrderSpecifier<Integer> statusOrder(QProject project) {
         return new CaseBuilder()
                 .when(project.status.eq(ProjectStatus.RECRUITING))
@@ -144,6 +202,9 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
     }
 
     private OrderSpecifier<?> sortOrder(QProject project, SortType sortType) {
+        if (sortType == SortType.DEADLINE) {
+            return project.recruitmentDeadline.asc();
+        }
         return project.createdAt.desc();
     }
 }
