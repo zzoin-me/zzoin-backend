@@ -14,7 +14,7 @@ import java.util.List;
 @Setter
 public class UserProfileResponseDTO {
     private String name;
-    private String field;
+    private List<String> fields;
     private String bio;
     private String profileUrl;
     private Boolean verified;

@@ -21,6 +21,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 
@@ -83,30 +84,30 @@ public class ProjectController {
     public ApiResponse<Page<ProjectPreviewResponseDTO>> getProjects(
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "LATEST") String sort,
-            @RequestParam(required = false) RecruitmentCategory category,
-            @RequestParam(required = false) String name,
+            @RequestParam(required = false) List<RecruitmentCategory> categories,
+            @RequestParam(required = false) List<String> names,
             @RequestParam(required = false) Integer maxDays,
             @RequestParam(required = false) Integer minCount,
             @RequestParam(required = false) Integer maxCount,
-            @RequestParam(required = false) GoalType goal,
+            @RequestParam(required = false) List<GoalType> goals,
             @RequestParam(required = false, defaultValue = "false") Boolean recruitingOnly,
             Pageable pageable
     )
     {
         SortType sortType = SortType.from(sort);
-        return ApiResponse.onSuccess(projectQueryService.getProjectList(sortType, keyword, category, name, maxDays, minCount, maxCount, goal, recruitingOnly, pageable));
+        return ApiResponse.onSuccess(projectQueryService.getProjectList(sortType, keyword, categories, names, maxDays, minCount, maxCount, goals, recruitingOnly, pageable));
     }
 
     @Operation(summary = "프로젝트 상세 조회")
     @GetMapping("/{projectId}")
-    private ApiResponse<ProjectDetailResponseDTO> getProjectDetail(@PathVariable Long projectId)
+    public ApiResponse<ProjectDetailResponseDTO> getProjectDetail(@PathVariable Long projectId)
     {
         return ApiResponse.onSuccess("프로젝트 상세 조회 성공했습니다.", projectQueryService.getProjectDetail(projectId));
     }
 
     @Operation(summary = "프로젝트 생성")
     @PostMapping
-    private ApiResponse<Void> createProject(
+    public ApiResponse<Void> createProject(
             Authentication authentication,
             @Valid @RequestBody CreateProjectRequestDTO req) {
 
@@ -119,7 +120,7 @@ public class ProjectController {
 
     @Operation(summary = "프로젝트 수정")
     @PatchMapping("/{projectId}")
-    private ApiResponse<Void> updateProject(
+    public ApiResponse<Void> updateProject(
             Authentication authentication,
             @PathVariable Long projectId,
             @Valid @RequestBody UpdateProjectRequestDTO req) {
@@ -133,7 +134,7 @@ public class ProjectController {
 
     @Operation(summary = "프로젝트 상태 변경")
     @PatchMapping("/{projectId}/status")
-    private ApiResponse<Void> updateProjectStatus(Authentication authentication, @PathVariable Long projectId, @Valid @RequestBody UpdateProjectStatusRequestDTO req) {
+    public ApiResponse<Void> updateProjectStatus(Authentication authentication, @PathVariable Long projectId, @Valid @RequestBody UpdateProjectStatusRequestDTO req) {
         CustomUserDetails userDetails =
                 (CustomUserDetails) authentication.getPrincipal();
 
@@ -143,7 +144,7 @@ public class ProjectController {
 
     @Operation(summary = "프로젝트 삭제")
     @DeleteMapping("/{projectId}")
-    private ApiResponse<Void> deleteProject(
+    public ApiResponse<Void> deleteProject(
             Authentication authentication,
             @PathVariable Long projectId) {
         CustomUserDetails userDetails =

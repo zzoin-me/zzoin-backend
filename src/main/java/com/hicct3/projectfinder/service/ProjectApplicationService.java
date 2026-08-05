@@ -4,9 +4,11 @@ import com.hicct3.projectfinder.dto.application.*;
 import com.hicct3.projectfinder.dto.project.CreateProjectRequestDTO;
 import com.hicct3.projectfinder.dto.project.UpdateProjectRequestDTO;
 import com.hicct3.projectfinder.dto.project.UpdateProjectStatusRequestDTO;
+import com.hicct3.projectfinder.entity.ApplicationAnswer;
 import com.hicct3.projectfinder.entity.Project;
 import com.hicct3.projectfinder.entity.ProjectApplication;
 import com.hicct3.projectfinder.entity.ProjectMember;
+import com.hicct3.projectfinder.entity.ProjectQuestion;
 import com.hicct3.projectfinder.entity.ProjectRecruitment;
 import com.hicct3.projectfinder.entity.enums.ApplicationStatus;
 import com.hicct3.projectfinder.entity.enums.MemberStatus;
@@ -20,6 +22,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +32,8 @@ public class ProjectApplicationService {
     private final ProjectRecruitmentRepository projectRecruitmentRepository;
     private final ProjectApplicationRepository projectApplicationRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final ProjectQuestionRepository projectQuestionRepository;
+    private final ApplicationAnswerRepository applicationAnswerRepository;
     private final UserRepository userRepository;
 
     @Transactional
@@ -66,7 +72,17 @@ public class ProjectApplicationService {
         if(!project.getAuthor().getUserId().equals(user.getUserId()))
             throw new GeneralException(ErrorCode.AUTHOR_MISMATCHED);
 
-        return ProjectApplicantsResponseDTO.of(projectApplicationRepository.findAllByProject(project).stream().map(x->ProjectApplicantResponseDTO.from(x, projectMemberRepository.findAllByUser(x.getUser()))).toList());
+        var applications = projectApplicationRepository.findAllByProject(project);
+
+        var answerMap = applicationAnswerRepository.findAllByApplicationIn(applications).stream()
+                .collect(Collectors.groupingBy(a -> a.getApplication().getId()));
+
+        return ProjectApplicantsResponseDTO.of(applications.stream().map(x -> {
+            var members = projectMemberRepository.findAllByUser(x.getUser());
+            var answers = answerMap.getOrDefault(x.getId(), List.<ApplicationAnswer>of()).stream()
+                    .map(AnswerResponseDTO::from).toList();
+            return ProjectApplicantResponseDTO.from(x, members, answers);
+        }).toList());
     }
 
     @Transactional
@@ -94,8 +110,30 @@ public class ProjectApplicationService {
                .build();
 
        recruitment.setApplicantCount(recruitment.getApplicantCount() + 1);
-
        projectApplicationRepository.save(application);
+
+       if(req.getAnswers() != null && !req.getAnswers().isEmpty()) {
+           var questions = projectQuestionRepository.findAllByProjectAndDeletedAtIsNullOrderByIdAsc(recruitment.getProject());
+           var questionMap = questions.stream().collect(Collectors.toMap(ProjectQuestion::getId, q -> q));
+
+           for(var answerReq : req.getAnswers()) {
+               var question = questionMap.get(answerReq.getQuestionId());
+               if(question == null) throw new GeneralException(ErrorCode.QUESTION_NOT_FOUND);
+
+               applicationAnswerRepository.save(ApplicationAnswer.builder()
+                       .application(application)
+                       .question(question)
+                       .answerText(answerReq.getAnswerText())
+                       .build());
+           }
+
+           var answeredIds = req.getAnswers().stream().map(AnswerRequestDTO::getQuestionId).collect(Collectors.toSet());
+           for(var q : questions) {
+               if(Boolean.TRUE.equals(q.getRequired()) && !answeredIds.contains(q.getId())) {
+                   throw new GeneralException(ErrorCode.REQUIRED_QUESTION_NOT_ANSWERED);
+               }
+           }
+       }
    }
 
    @Transactional

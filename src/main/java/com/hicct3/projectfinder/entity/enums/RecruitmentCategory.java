@@ -4,6 +4,5 @@ public enum RecruitmentCategory {
     PLANNING,
     DESIGN,
     DEVELOPMENT,
-    MARKETING,
-    ETC
+    MARKETING
 }

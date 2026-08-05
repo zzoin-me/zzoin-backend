@@ -15,7 +15,7 @@ import java.util.List;
 public class MyProfileResponseDTO {
     private String name;
     private String email;
-    private String field;
+    private List<String> fields;
     private String bio;
     private String profileUrl;
     private Boolean verified;

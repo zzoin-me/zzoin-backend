@@ -35,12 +35,12 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
     public Page<Project> searchProjects(
             SortType sortType,
             String keyword,
-            RecruitmentCategory category,
-            String name,
+            List<RecruitmentCategory> categories,
+            List<String> names,
             Integer maxDays,
             Integer minCount,
             Integer maxCount,
-            GoalType goal,
+            List<GoalType> goals,
             Boolean recruitingOnly,
             Pageable pageable
     ) {
@@ -50,9 +50,9 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
 
         where = where.and(keywordContains(keyword));
         where = where.and(maxDaysContains(maxDays));
-        where = where.and(recruitmentContains(category, name));
-        where = where.and(countBetween(minCount, maxCount, category, name));
-        where = where.and(goalContains(goal));
+        where = where.and(recruitmentContains(categories, names));
+        where = where.and(countBetween(minCount, maxCount, categories, names));
+        where = where.and(goalContains(goals));
         where = where.and(recruitingOnlyContains(recruitingOnly));
 
         List<Project> content = queryFactory
@@ -118,19 +118,21 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
         );
     }
 
-    private BooleanExpression recruitmentContains(RecruitmentCategory category, String name) {
-        if (category == null && (name == null || name.isBlank())) {
+    private BooleanExpression recruitmentContains(List<RecruitmentCategory> categories, List<String> names) {
+        boolean hasCategory = categories != null && !categories.isEmpty();
+        boolean hasName = names != null && !names.isEmpty();
+        if (!hasCategory && !hasName) {
             return null;
         }
         QProject project = QProject.project;
         QProjectRecruitment recruitment = QProjectRecruitment.projectRecruitment;
 
         BooleanExpression cond = recruitment.deletedAt.isNull();
-        if (category != null) {
-            cond = cond.and(recruitment.category.eq(category));
+        if (hasCategory) {
+            cond = cond.and(recruitment.category.in(categories));
         }
-        if (name != null && !name.isBlank()) {
-            cond = cond.and(recruitment.name.eq(name));
+        if (hasName) {
+            cond = cond.and(recruitment.name.in(names));
         }
 
         return project.id.in(
@@ -141,7 +143,7 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
         );
     }
 
-    private BooleanExpression countBetween(Integer minCount, Integer maxCount, RecruitmentCategory category, String name) {
+    private BooleanExpression countBetween(Integer minCount, Integer maxCount, List<RecruitmentCategory> categories, List<String> names) {
         if (minCount == null && maxCount == null) {
             return null;
         }
@@ -152,11 +154,11 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
         BooleanExpression conditions = recruitment.project.id.eq(project.id)
                 .and(recruitment.deletedAt.isNull());
 
-        if (category != null) {
-            conditions = conditions.and(recruitment.category.eq(category));
+        if (categories != null && !categories.isEmpty()) {
+            conditions = conditions.and(recruitment.category.in(categories));
         }
-        if (name != null && !name.isBlank()) {
-            conditions = conditions.and(recruitment.name.eq(name));
+        if (names != null && !names.isEmpty()) {
+            conditions = conditions.and(recruitment.name.in(names));
         }
 
         var sumExpression = Expressions.asNumber(
@@ -175,11 +177,11 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
         }
     }
 
-    private BooleanExpression goalContains(GoalType goal) {
-        if (goal == null) {
+    private BooleanExpression goalContains(List<GoalType> goals) {
+        if (goals == null || goals.isEmpty()) {
             return null;
         }
-        return QProject.project.goal.eq(goal);
+        return QProject.project.goal.in(goals);
     }
 
     private BooleanExpression recruitingOnlyContains(Boolean recruitingOnly) {

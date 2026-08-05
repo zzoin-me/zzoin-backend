@@ -29,7 +29,6 @@ public class StackService {
                         .id(u.getId())
                         .name(u.getName())
                         .build()).toList();
-
         return StackInfoListResponseDTO.builder()
                 .stackInfoList(list)
                 .build();
@@ -57,4 +56,3 @@ public class StackService {
                 .build());
     }
 }
-

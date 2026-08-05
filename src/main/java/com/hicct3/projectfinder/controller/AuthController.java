@@ -4,11 +4,14 @@ import com.hicct3.projectfinder.dto.auth.*;
 import com.hicct3.projectfinder.global.ApiResponse;
 import com.hicct3.projectfinder.global.CustomUserDetails;
 import com.hicct3.projectfinder.service.AuthService;
+import com.hicct3.projectfinder.service.OAuthAuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RequiredArgsConstructor
 @RestController
@@ -16,6 +19,23 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final OAuthAuthService oAuthAuthService;
+
+    @Operation(summary = "소셜 계정 연결")
+    @PostMapping("/link-account")
+    public ApiResponse<LoginResponseDTO> linkAccount(@RequestBody @Valid LinkAccountRequestDTO req) {
+        Map<String, Object> result = oAuthAuthService.linkAccount(
+                req.getTempToken(),
+                req.getPassword(),
+                req.getProvider(),
+                req.getProviderId()
+        );
+        LoginResponseDTO dto = LoginResponseDTO.builder()
+                .accessToken((String) result.get("accessToken"))
+                .refreshToken((String) result.get("refreshToken"))
+                .build();
+        return ApiResponse.onSuccess("소셜 계정 연결에 성공했습니다.", dto);
+    }
 
     @Operation(summary = "회원가입 이메일 전송")
     @PostMapping("/signup/email/send")

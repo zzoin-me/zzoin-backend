@@ -5,6 +5,8 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 @Entity
@@ -27,6 +29,13 @@ public class User {
 
     @Column(nullable = false, unique = true)
     private String email;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private String provider = "local";
+
+    @Column
+    private String providerId;
 
     @Column(unique = true)
     private String verifiedEmail;
@@ -100,5 +109,24 @@ public class User {
     public Boolean isDeleted()
     {
         return this.deletedAt != null;
+    }
+
+    @Transient
+    public List<String> getFields() {
+        if (field == null || field.isBlank()) {
+            return Collections.emptyList();
+        }
+        return Arrays.stream(field.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+    }
+
+    public void setFields(List<String> fields) {
+        if (fields == null || fields.isEmpty()) {
+            this.field = null;
+        } else {
+            this.field = String.join(",", fields.stream().map(String::trim).filter(s -> !s.isEmpty()).toList());
+        }
     }
 }

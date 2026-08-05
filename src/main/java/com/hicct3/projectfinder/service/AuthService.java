@@ -396,13 +396,12 @@ public class AuthService {
         user.setVerified(true);
         user.setVerifiedEmail(lowerVerifyEmail);
 
-        var schoolDomain = schoolDomainRepository.findById(req.getUnivId()).orElseThrow(()-> new GeneralException(ErrorCode.UNIVERSITY_NOT_FOUND));
         String emailDomain = getDomain(lowerVerifyEmail);
-        if (!emailDomain.equals(schoolDomain.getDomain())
-            && !emailDomain.endsWith("." + schoolDomain.getDomain()))
-            throw new GeneralException(ErrorCode.UNIVERSITY_NOT_MATCHED);
+        var schoolDomainOpt = schoolDomainRepository.findByMatchingDomain(emailDomain);
+        if (schoolDomainOpt.isEmpty())
+            throw new GeneralException(ErrorCode.NOT_UNIVERSITY_EMAIL);
+        user.setSchoolDomain(schoolDomainOpt.get());
 
-        user.setSchoolDomain(schoolDomain);
         emailVerificationRepository.delete(verification);
     }
 
