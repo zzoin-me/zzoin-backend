@@ -33,7 +33,12 @@ public enum RecruitmentRole {
     SNS("SNS", RecruitmentCategory.MARKETING),
     BRAND_MARKETING("브랜드", RecruitmentCategory.MARKETING),
     AD("광고", RecruitmentCategory.MARKETING),
-    PR("PR", RecruitmentCategory.MARKETING);
+    PR("PR", RecruitmentCategory.MARKETING),
+    MARKETING_ETC("마케팅 기타", RecruitmentCategory.MARKETING),
+
+    PLANNING_ETC("기획 기타", RecruitmentCategory.PLANNING),
+    DESIGN_ETC("디자인 기타", RecruitmentCategory.DESIGN),
+    DEVELOPMENT_ETC("개발 기타", RecruitmentCategory.DEVELOPMENT);
 
     private final String displayName;
     private final RecruitmentCategory category;

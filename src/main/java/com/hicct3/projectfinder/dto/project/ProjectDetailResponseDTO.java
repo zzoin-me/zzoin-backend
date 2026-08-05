@@ -32,7 +32,9 @@ public class ProjectDetailResponseDTO {
     private String authorNickname;
     private List<RecruitmentDetailResponseDTO> recruitments;
 
-    public static ProjectDetailResponseDTO from(Project project, List<RecruitmentDetailResponseDTO> recruitments)
+    private List<QuestionResponseDTO> questions;
+
+    public static ProjectDetailResponseDTO from(Project project, List<RecruitmentDetailResponseDTO> recruitments, List<QuestionResponseDTO> questions)
     {
         return ProjectDetailResponseDTO.builder()
                 .id(project.getId())
@@ -48,6 +50,7 @@ public class ProjectDetailResponseDTO {
                 .projectStatus(project.getStatus())
                 .authorNickname(project.getAuthor().getNickName())
                 .recruitments(recruitments)
+                .questions(questions)
                 .build();
     }
 }

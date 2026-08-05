@@ -24,7 +24,7 @@ public class UserService {
 
         return UserProfileResponseDTO.builder()
                 .name(user.getNickName())
-                .field(user.getField())
+                .fields(user.getFields())
                 .bio(user.getBio())
                 .profileUrl(user.getProfileUrl())
                 .verified(user.getVerified())
@@ -44,7 +44,7 @@ public class UserService {
         return MyProfileResponseDTO.builder()
                 .name(user.getNickName())
                 .email(user.getEmail())
-                .field(user.getField())
+                .fields(user.getFields())
                 .bio(user.getBio())
                 .profileUrl(user.getProfileUrl())
                 .verified(user.getVerified())
@@ -98,8 +98,8 @@ public class UserService {
             user.setStacks(stacks);
         }
 
-        if(req.getField() != null)
-            user.setField(req.getField());
+        if(req.getFields() != null)
+            user.setFields(req.getFields());
 
         if(req.getProfileUrl() != null)
             user.setProfileUrl(req.getProfileUrl());

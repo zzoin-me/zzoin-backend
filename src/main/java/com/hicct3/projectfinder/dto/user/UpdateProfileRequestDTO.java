@@ -17,8 +17,7 @@ public class UpdateProfileRequestDTO {
     @Size(max = 500, message = "자기소개는 500자 이하여야 합니다.")
     private String bio;
 
-    @Size(max = 50, message = "직군은 50자 이하여야 합니다.")
-    private String field;
+    private List<String> fields;
 
     private String profileUrl;
 

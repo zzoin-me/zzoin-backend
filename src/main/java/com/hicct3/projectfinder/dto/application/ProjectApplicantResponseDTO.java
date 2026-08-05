@@ -31,7 +31,9 @@ public class ProjectApplicantResponseDTO {
 
     private List<ProjectMemberResponseDTO> histories;
 
-    public static ProjectApplicantResponseDTO from(ProjectApplication application, List<ProjectMember> members)
+    private List<AnswerResponseDTO> answers;
+
+    public static ProjectApplicantResponseDTO from(ProjectApplication application, List<ProjectMember> members, List<AnswerResponseDTO> answers)
     {
         return ProjectApplicantResponseDTO.builder()
                 .applicationId(application.getId())
@@ -49,6 +51,7 @@ public class ProjectApplicantResponseDTO {
                 .ratingAvg(application.getUser().getRatingAvg())
                 .status(application.getStatus())
                 .histories(members.stream().map(ProjectMemberResponseDTO::from).toList())
+                .answers(answers)
                 .build();
     }
 }

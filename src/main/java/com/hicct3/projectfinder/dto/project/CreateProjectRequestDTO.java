@@ -50,4 +50,6 @@ public class CreateProjectRequestDTO {
     @NotNull
     private List<CreateRecruitmentRequestDTO> recruitments;
 
+    private List<CreateQuestionRequestDTO> questions;
+
 }
