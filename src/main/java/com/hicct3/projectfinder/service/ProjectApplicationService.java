@@ -11,6 +11,7 @@ import com.hicct3.projectfinder.entity.ProjectRecruitment;
 import com.hicct3.projectfinder.entity.enums.ApplicationStatus;
 import com.hicct3.projectfinder.entity.enums.MemberStatus;
 import com.hicct3.projectfinder.entity.enums.ProjectStatus;
+import com.hicct3.projectfinder.entity.enums.Role;
 import com.hicct3.projectfinder.global.ErrorCode;
 import com.hicct3.projectfinder.global.GeneralException;
 import com.hicct3.projectfinder.repository.*;
@@ -49,6 +50,7 @@ public class ProjectApplicationService {
                     .user(application.getUser())
                     .project(application.getRecruitment().getProject())
                     .recruitment(application.getRecruitment())
+                    .role(Role.MEMBER)
                     .build();
             projectMemberRepository.save(member);
         }

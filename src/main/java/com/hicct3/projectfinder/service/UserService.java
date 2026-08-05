@@ -95,6 +95,9 @@ public class UserService {
             if (stacks.size() != distinctStackIds.size())
                 throw new GeneralException(ErrorCode.STACK_NOT_FOUND);
 
+            if(stacks.size() > 7)
+                throw new GeneralException(ErrorCode.STACK_SIZE_EXCEEDED);
+
             user.setStacks(stacks);
         }
 

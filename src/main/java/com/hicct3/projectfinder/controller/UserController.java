@@ -1,7 +1,10 @@
 package com.hicct3.projectfinder.controller;
 
+import com.hicct3.projectfinder.dto.project.MyReviewableProjectResponseDTO;
 import com.hicct3.projectfinder.dto.project.myproject.MyApplicationPreviewResponseDTO;
 import com.hicct3.projectfinder.dto.project.myproject.MyProjectPreviewResponseDTO;
+import com.hicct3.projectfinder.dto.project.review.MemberReviewsResponseDTO;
+import com.hicct3.projectfinder.dto.project.review.MyReviewsResponseDTO;
 import com.hicct3.projectfinder.dto.user.*;
 import com.hicct3.projectfinder.entity.enums.ApplicationStatus;
 import com.hicct3.projectfinder.global.ApiResponse;
@@ -22,6 +25,23 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
     private final UserService userService;
     private final ProjectService projectService;
+
+    @Operation(summary = "내가 받은 리뷰 조회")
+    @GetMapping("/me/reviews/received")
+    public ApiResponse<MyReviewsResponseDTO> getMyReceivedReviews(Authentication authentication) {
+        CustomUserDetails userDetails =
+                (CustomUserDetails) authentication.getPrincipal();
+        return ApiResponse.onSuccess("리뷰 조회에 성공했습니다.", projectService.getReceivedReviews(userDetails.getId()));
+    }
+
+    @Operation(summary = "남겼거나 남길 수 있는 리뷰 조회")
+    @GetMapping("/me/reviews/reviewable")
+    public ApiResponse<Page<MyReviewableProjectResponseDTO>> getMyReceivedReviews(Authentication authentication, Pageable pageable) {
+        CustomUserDetails userDetails =
+                (CustomUserDetails) authentication.getPrincipal();
+        return ApiResponse.onSuccess("리뷰 조회에 성공했습니다.", projectService.getMyReviewableProjects(userDetails.getId(), pageable));
+    }
+
 
     @Operation(summary = "내가 지원한 프로젝트 조회")
     @GetMapping("/me/applications")

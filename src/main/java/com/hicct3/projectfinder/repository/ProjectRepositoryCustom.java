@@ -2,7 +2,7 @@ package com.hicct3.projectfinder.repository;
 
 import com.hicct3.projectfinder.entity.Project;
 import com.hicct3.projectfinder.entity.enums.GoalType;
-import com.hicct3.projectfinder.entity.enums.RecruitmentCategory;
+import com.hicct3.projectfinder.entity.enums.JobCategoryCode;
 import com.hicct3.projectfinder.entity.enums.SortType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -13,7 +13,7 @@ public interface ProjectRepositoryCustom {
     Page<Project> searchProjects(
             SortType sortType,
             String keyword,
-            RecruitmentCategory category,
+            JobCategoryCode category,
             String name,
             Integer maxDays,
             Integer minCount,
@@ -23,5 +23,5 @@ public interface ProjectRepositoryCustom {
             Pageable pageable
     );
 
-    Map<RecruitmentCategory, Long> countProjectsPerCategory();
+    Map<JobCategoryCode, Long> countProjectsPerCategory();
 }
