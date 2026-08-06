@@ -30,6 +30,7 @@ public enum ErrorCode {
     DUPLICATE_VERIFIED_EMAIL(HttpStatus.BAD_REQUEST, "인증에 이용된 이메일입니다."),
     EMAIL_USED_BY_OTHER_ACCOUNT(HttpStatus.BAD_REQUEST, "이미 다른 계정에서 사용 중인 이메일입니다."),
     USER_NOT_VERIFIED(HttpStatus.BAD_REQUEST, "인증되지 않은 사용자입니다."),
+    NICKNAME_CHANGE_COOLDOWN(HttpStatus.BAD_REQUEST, "닉네임은 90일마다 변경할 수 있습니다."),
 
     // Email
     EMAIL_SEND_FAILED(HttpStatus.BAD_REQUEST, "이메일 전송에 실패했습니다."),

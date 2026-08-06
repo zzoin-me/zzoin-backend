@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @AllArgsConstructor
@@ -20,6 +21,7 @@ public class MyProfileResponseDTO {
     private String profileUrl;
     private Boolean verified;
     private String verifiedEmail;
+    private LocalDateTime nicknameChangeableAt;
 
     private List<StackInfoResponseDTO> stackInfoList;
 

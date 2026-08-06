@@ -123,6 +123,8 @@ public class OAuthAuthService {
                 .admin(false)
                 .provider(attrs.getProvider())
                 .providerId(attrs.getProviderId())
+                .profileUrl(attrs.getProfileImageUrl() != null && !attrs.getProfileImageUrl().isBlank() ? attrs.getProfileImageUrl() : null)
+                .nicknameChangedAt(java.time.LocalDateTime.now())
                 .build();
 
         return userRepository.save(user);
