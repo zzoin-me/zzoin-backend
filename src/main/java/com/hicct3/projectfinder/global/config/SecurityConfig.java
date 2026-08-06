@@ -127,8 +127,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/projects/**").hasRole("VERIFIED")
                         .requestMatchers(HttpMethod.GET, "/api/posts", "/api/posts/{postId}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/posts/{postId}/comments").permitAll()
-                        .requestMatchers("/api/posts/**").authenticated()
-                        .requestMatchers("/api/comments/**").authenticated()
+                        .requestMatchers("/api/posts/**").hasRole("VERIFIED")
+                        .requestMatchers("/api/comments/**").hasRole("VERIFIED")
                         .anyRequest().authenticated()
                 )
 

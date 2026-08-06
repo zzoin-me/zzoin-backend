@@ -59,6 +59,9 @@ public class User {
     private String profileUrl;
 
     @Column
+    private LocalDateTime nicknameChangedAt;
+
+    @Column
     private LocalDateTime deletedAt;
 
     @Column(nullable = false)

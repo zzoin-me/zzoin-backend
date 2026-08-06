@@ -204,6 +204,7 @@ public class AuthService {
                 .password(passwordEncoder.encode(req.getPassword()))
                 .verified(schoolDomainOpt.isPresent())
                 .admin(false)
+                .nicknameChangedAt(java.time.LocalDateTime.now())
                 .build();
 
         if (schoolDomainOpt.isPresent()) {

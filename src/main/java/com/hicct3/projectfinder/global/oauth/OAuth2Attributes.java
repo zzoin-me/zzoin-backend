@@ -13,6 +13,7 @@ public class OAuth2Attributes {
     private String email;
     private Boolean emailVerified;
     private String name;
+    private String profileImageUrl;
 
     public static OAuth2Attributes of(String registrationId, String userNameAttributeName, Map<String, Object> attributes) {
         if ("kakao".equalsIgnoreCase(registrationId)) {
@@ -31,6 +32,7 @@ public class OAuth2Attributes {
                 .email(String.valueOf(attributes.get("email")))
                 .emailVerified(emailVerified)
                 .name(String.valueOf(attributes.getOrDefault("name", "")))
+                .profileImageUrl(String.valueOf(attributes.getOrDefault("picture", "")))
                 .build();
     }
 
@@ -44,6 +46,7 @@ public class OAuth2Attributes {
         Boolean emailVerified = isEmailVerifiedObj instanceof Boolean ? (Boolean) isEmailVerifiedObj : "true".equals(String.valueOf(isEmailVerifiedObj));
 
         String nickname = profile != null ? String.valueOf(profile.getOrDefault("nickname", "")) : "";
+        String profileImageUrl = profile != null ? String.valueOf(profile.getOrDefault("profile_image_url", "")) : "";
 
         return OAuth2Attributes.builder()
                 .provider("kakao")
@@ -51,6 +54,7 @@ public class OAuth2Attributes {
                 .email(email)
                 .emailVerified(emailVerified)
                 .name(nickname)
+                .profileImageUrl(profileImageUrl)
                 .build();
     }
 }

@@ -10,6 +10,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 
 @Service
@@ -49,6 +50,11 @@ public class UserService {
                 .profileUrl(user.getProfileUrl())
                 .verified(user.getVerified())
                 .verifiedEmail(user.getVerifiedEmail())
+                .nicknameChangeableAt(
+                    user.getNicknameChangedAt() == null
+                        ? null
+                        : user.getNicknameChangedAt().plusDays(90)
+                )
                 .stackInfoList(user.getStacks().stream().
                         map(x->StackInfoResponseDTO.builder()
                                 .id(x.getId())
@@ -79,10 +85,16 @@ public class UserService {
 
         if(req.getNickName() != null && !req.getNickName().equals(user.getNickName()))
         {
+            if (user.getNicknameChangedAt() != null
+                    && user.getNicknameChangedAt().plusDays(90).isAfter(LocalDateTime.now())) {
+                throw new GeneralException(ErrorCode.NICKNAME_CHANGE_COOLDOWN);
+            }
+
             if(userRepository.existsByNickName(req.getNickName()))
                 throw new GeneralException(ErrorCode.DUPLICATE_NICKNAME);
 
             user.setNickName(req.getNickName());
+            user.setNicknameChangedAt(LocalDateTime.now());
         }
 
         if(req.getBio() != null)
