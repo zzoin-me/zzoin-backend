@@ -44,6 +44,8 @@ public class ProjectQueryService {
         if(project.getDeletedAt() != null)
             throw new GeneralException(ErrorCode.PROJECT_DELETED);
 
+        project.increaseViewCount();
+
         var recruitments = projectRecruitmentRepository.findByProject(project).stream().map(RecruitmentDetailResponseDTO::from).toList();
         var questions = projectQuestionRepository.findAllByProjectAndDeletedAtIsNullOrderByIdAsc(project).stream().map(QuestionResponseDTO::from).toList();
 
@@ -75,4 +77,45 @@ public class ProjectQueryService {
         return projectRepository.countProjectsPerCategory();
     }
 
+    @Transactional(readOnly = true)
+    public Page<ProjectPreviewResponseDTO> getPopularProjects(Pageable pageable)
+    {
+        Page<Project> projects = projectRepository.findPopularProjects(pageable);
+
+        List<Project> content = projects.getContent();
+        Map<Long, List<ProjectRecruitment>> recruitmentMap = projectRecruitmentRepository
+                .findAllByProjectInAndDeletedAtIsNull(content)
+                .stream()
+                .collect(Collectors.groupingBy(r -> r.getProject().getId()));
+
+        List<ProjectPreviewResponseDTO> dtos = content.stream().map(project -> ProjectPreviewResponseDTO.from(
+                project,
+                recruitmentMap.getOrDefault(project.getId(), List.of())
+        )).collect(Collectors.toList());
+
+        return new PageImpl<>(dtos, pageable, projects.getTotalElements());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ProjectPreviewResponseDTO> getRecommendProjects(Long userId, Pageable pageable)
+    {
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorCode.USER_NOT_FOUND));
+        List<String> userFields = user.getFields();
+
+        Page<Project> projects = projectRepository.findRecommendProjects(userId, userFields, pageable);
+
+        List<Project> content = projects.getContent();
+        Map<Long, List<ProjectRecruitment>> recruitmentMap = projectRecruitmentRepository
+                .findAllByProjectInAndDeletedAtIsNull(content)
+                .stream()
+                .collect(Collectors.groupingBy(r -> r.getProject().getId()));
+
+        List<ProjectPreviewResponseDTO> dtos = content.stream().map(project -> ProjectPreviewResponseDTO.from(
+                project,
+                recruitmentMap.getOrDefault(project.getId(), List.of())
+        )).collect(Collectors.toList());
+
+        return new PageImpl<>(dtos, pageable, projects.getTotalElements());
+    }
 }

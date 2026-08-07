@@ -60,6 +60,7 @@ public class CommentService {
                 .build();
 
         Comment saved = commentRepository.save(comment);
+        post.increaseCommentCount();
         return CommentResponseDTO.of(saved, userId);
     }
 
@@ -73,6 +74,7 @@ public class CommentService {
     public void deleteComment(Long userId, Long commentId) {
         Comment comment = getOwnedComment(userId, commentId);
         comment.setDeletedAt(LocalDateTime.now());
+        comment.getPost().decreaseCommentCount();
     }
 
     @Transactional

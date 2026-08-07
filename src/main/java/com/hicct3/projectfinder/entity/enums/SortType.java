@@ -9,7 +9,9 @@ import org.springframework.data.domain.Sort;
 public enum SortType {
 
     LATEST(Sort.by(Sort.Direction.DESC, "createdAt")),
-    DEADLINE(Sort.by(Sort.Direction.ASC, "recruitmentDeadline"));
+    DEADLINE(Sort.by(Sort.Direction.ASC, "recruitmentDeadline")),
+    POPULAR(null),
+    RECOMMEND(null);
 
     private final Sort sort;
 

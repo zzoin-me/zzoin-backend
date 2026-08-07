@@ -25,4 +25,8 @@ public interface ProjectRepositoryCustom {
     );
 
     Map<RecruitmentCategory, Long> countProjectsPerCategory();
+
+    Page<Project> findRecommendProjects(Long userId, List<String> userFields, Pageable pageable);
+
+    Page<Project> findPopularProjects(Pageable pageable);
 }
