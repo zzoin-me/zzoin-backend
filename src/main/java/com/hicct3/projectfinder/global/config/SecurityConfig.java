@@ -122,6 +122,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/link-account").permitAll()
                         .requestMatchers("/oauth2/**", "/login/**").permitAll()
                         .requestMatchers("/api/univs/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/project-feeds/popular").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/project-feeds/recommend").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/projects", "/api/projects/{projectId}").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/stacks").hasRole("ADMIN")
                         .requestMatchers("/api/projects/**").hasRole("VERIFIED")

@@ -74,6 +74,7 @@ public class PostService {
         var existing = postLikeRepository.findByUser_UserIdAndPost_Id(userId, postId);
         if (existing.isPresent()) {
             postLikeRepository.delete(existing.get());
+            post.decreaseLikeCount();
             return ToggleResultDTO.of(false);
         }
 
@@ -83,6 +84,7 @@ public class PostService {
                 .createdAt(LocalDateTime.now())
                 .build();
         postLikeRepository.save(like);
+        post.increaseLikeCount();
         return ToggleResultDTO.of(true);
     }
 

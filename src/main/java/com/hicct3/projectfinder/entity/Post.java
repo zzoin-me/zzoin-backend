@@ -32,6 +32,14 @@ public class Post {
     private Integer viewCount = 0;
 
     @Column(nullable = false)
+    @Builder.Default
+    private Integer likeCount = 0;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer commentCount = 0;
+
+    @Column(nullable = false)
     private LocalDateTime createdAt;
 
     @Column(nullable = false)
@@ -46,5 +54,21 @@ public class Post {
 
     public void increaseViewCount() {
         this.viewCount = this.viewCount + 1;
+    }
+
+    public void increaseLikeCount() {
+        this.likeCount++;
+    }
+
+    public void decreaseLikeCount() {
+        this.likeCount = Math.max(0, this.likeCount - 1);
+    }
+
+    public void increaseCommentCount() {
+        this.commentCount++;
+    }
+
+    public void decreaseCommentCount() {
+        this.commentCount = Math.max(0, this.commentCount - 1);
     }
 }

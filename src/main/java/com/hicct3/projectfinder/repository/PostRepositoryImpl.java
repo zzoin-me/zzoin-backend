@@ -11,6 +11,9 @@ import com.hicct3.projectfinder.entity.enums.PostSortType;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -197,7 +200,13 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
 
     private OrderSpecifier<?> sortOrder(QPost post, PostSortType sortType) {
         if (sortType == PostSortType.POPULAR) {
-            return post.viewCount.desc();
+            return Expressions.numberTemplate(Double.class,
+                "({0} * 5 + {1} * 3 + {2}) * POW(0.95, DATEDIFF(CURDATE(), {3}))",
+                post.likeCount,
+                post.commentCount,
+                post.viewCount,
+                post.createdAt
+            ).desc();
         }
         return post.createdAt.desc();
     }
