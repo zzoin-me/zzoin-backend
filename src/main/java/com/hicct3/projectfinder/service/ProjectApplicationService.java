@@ -12,7 +12,6 @@ import com.hicct3.projectfinder.entity.ProjectQuestion;
 import com.hicct3.projectfinder.entity.ProjectRecruitment;
 import com.hicct3.projectfinder.entity.enums.ApplicationStatus;
 import com.hicct3.projectfinder.entity.enums.MemberStatus;
-import com.hicct3.projectfinder.entity.enums.NotificationType;
 import com.hicct3.projectfinder.entity.enums.ProjectStatus;
 import com.hicct3.projectfinder.global.ErrorCode;
 import com.hicct3.projectfinder.global.GeneralException;
@@ -36,7 +35,6 @@ public class ProjectApplicationService {
     private final ProjectQuestionRepository projectQuestionRepository;
     private final ApplicationAnswerRepository applicationAnswerRepository;
     private final UserRepository userRepository;
-    private final NotificationService notificationService;
 
     @Transactional
     public void updateApplicantStatus(Long userId, Long applicationId, UpdateApplicantStatusDTO dto)
@@ -63,28 +61,7 @@ public class ProjectApplicationService {
 
        application.getRecruitment().setApplicantCount(application.getRecruitment().getApplicantCount() - 1);
        application.setStatus(dto.getStatus());
-
-       var project = application.getRecruitment().getProject();
-       var applicantId = application.getUser().getUserId();
-
-       if (dto.getStatus() == ApplicationStatus.APPROVED) {
-           notificationService.createNotification(
-                   applicantId,
-                   NotificationType.APPLICATION_APPROVED,
-                   "지원이 승인되었어요 🎉",
-                   "'" + project.getTitle() + "' 프로젝트에 합류하게 되었어요!",
-                   "/mypage/applications",
-                   project.getId());
-       } else if (dto.getStatus() == ApplicationStatus.REJECTED) {
-           notificationService.createNotification(
-                   applicantId,
-                   NotificationType.APPLICATION_REJECTED,
-                   "지원 결과 안내",
-                   "'" + project.getTitle() + "' 프로젝트 지원이 아쉽게도 거절되었어요.",
-                   "/mypage/applications",
-                   project.getId());
-       }
-   }
+    }
 
     @Transactional
     public ProjectApplicantsResponseDTO getApplicants(Long userId, Long projectId)
@@ -150,22 +127,13 @@ public class ProjectApplicationService {
                        .build());
            }
 
-               var answeredIds = req.getAnswers().stream().map(AnswerRequestDTO::getQuestionId).collect(Collectors.toSet());
-               for(var q : questions) {
-                   if(Boolean.TRUE.equals(q.getRequired()) && !answeredIds.contains(q.getId())) {
-                       throw new GeneralException(ErrorCode.REQUIRED_QUESTION_NOT_ANSWERED);
-                   }
+           var answeredIds = req.getAnswers().stream().map(AnswerRequestDTO::getQuestionId).collect(Collectors.toSet());
+           for(var q : questions) {
+               if(Boolean.TRUE.equals(q.getRequired()) && !answeredIds.contains(q.getId())) {
+                   throw new GeneralException(ErrorCode.REQUIRED_QUESTION_NOT_ANSWERED);
                }
+           }
        }
-
-       var project = recruitment.getProject();
-       notificationService.createNotification(
-               project.getAuthor().getUserId(),
-               NotificationType.APPLICATION_RECEIVED,
-               "새로운 지원이 접수되었어요",
-               user.getNickName() + "님이 '" + project.getTitle() + "'에 지원했어요.",
-               "/projects/" + project.getId() + "/manage#applicants",
-               project.getId());
    }
 
    @Transactional
