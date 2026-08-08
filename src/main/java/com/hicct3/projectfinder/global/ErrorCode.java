@@ -60,6 +60,7 @@ public enum ErrorCode {
     RECRUITMENT_EMPTY(HttpStatus.BAD_REQUEST, "모집 정보가 존재하지 않습니다."),
     INVALID_RECRUITMENT_ROLE(HttpStatus.BAD_REQUEST, "모집 직군이 카테고리와 일치하지 않습니다."),
     AUTHOR_NOT_APPLICABLE(HttpStatus.BAD_REQUEST, "작성자가 지원할 수 없습니다."),
+    INVALID_STATUS_TRANSITION(HttpStatus.BAD_REQUEST, "잘못된 상태 변경입니다."),
     ALREADY_APPLIED(HttpStatus.BAD_REQUEST, "이미 지원한 모집입니다."),
     APPLICATION_NOT_FOUND(HttpStatus.BAD_REQUEST, "지원서를 찾을 수 없습니다."),
 

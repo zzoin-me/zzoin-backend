@@ -133,6 +133,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/comments/**").hasRole("VERIFIED")
                         .requestMatchers(HttpMethod.GET, "/api/notifications/stream").permitAll()
                         .requestMatchers("/api/notifications/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/projects/*/chatroom/stream").permitAll()
+                        .requestMatchers("/api/projects/*/chatroom/**").authenticated()
                         .anyRequest().authenticated()
                 )
 

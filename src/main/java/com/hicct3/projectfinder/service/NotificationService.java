@@ -133,18 +133,18 @@ public class NotificationService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorCode.USER_NOT_FOUND));
 
-        deviceTokenRepository.findAllByUser(user).stream()
-                .filter(t -> t.getToken().equals(token))
-                .findFirst()
-                .ifPresentOrElse(
-                        existing -> {},
-                        () -> deviceTokenRepository.save(DeviceToken.builder()
-                                .user(user)
-                                .token(token)
-                                .platform(platform)
-                                .createdAt(LocalDateTime.now())
-                                .build())
-                );
+        if (deviceTokenRepository.findByToken(token).isEmpty()) {
+            try {
+                deviceTokenRepository.save(DeviceToken.builder()
+                        .user(user)
+                        .token(token)
+                        .platform(platform)
+                        .createdAt(LocalDateTime.now())
+                        .build());
+            } catch (Exception e) {
+                log.debug("Device token already exists, skipping: {}", token);
+            }
+        }
     }
 
     @Transactional

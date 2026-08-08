@@ -6,15 +6,20 @@ import com.hicct3.projectfinder.dto.project.UpdateProjectStatusRequestDTO;
 import com.hicct3.projectfinder.dto.project.myproject.MyApplicationPreviewResponseDTO;
 import com.hicct3.projectfinder.dto.project.myproject.MyProjectPreviewResponseDTO;
 import com.hicct3.projectfinder.entity.Project;
+import com.hicct3.projectfinder.entity.ProjectMember;
 import com.hicct3.projectfinder.entity.ProjectQuestion;
 import com.hicct3.projectfinder.entity.ProjectRecruitment;
+import com.hicct3.projectfinder.entity.User;
 import com.hicct3.projectfinder.entity.enums.ApplicationStatus;
+import com.hicct3.projectfinder.entity.enums.MemberStatus;
+import com.hicct3.projectfinder.entity.enums.NotificationType;
 import com.hicct3.projectfinder.entity.enums.ProjectStatus;
 import com.hicct3.projectfinder.entity.enums.RecruitmentCategory;
 import com.hicct3.projectfinder.entity.enums.RecruitmentRole;
 import com.hicct3.projectfinder.global.ErrorCode;
 import com.hicct3.projectfinder.global.GeneralException;
 import com.hicct3.projectfinder.repository.ProjectApplicationRepository;
+import com.hicct3.projectfinder.repository.ProjectMemberRepository;
 import com.hicct3.projectfinder.repository.ProjectQuestionRepository;
 import com.hicct3.projectfinder.repository.ProjectRecruitmentRepository;
 import com.hicct3.projectfinder.repository.ProjectRepository;
@@ -39,7 +44,10 @@ public class ProjectService {
     private final ProjectRecruitmentRepository projectRecruitmentRepository;
     private final ProjectApplicationRepository projectApplicationRepository;
     private final ProjectQuestionRepository projectQuestionRepository;
+    private final ProjectMemberRepository projectMemberRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
+    private final ChatService chatService;
 
     @Transactional(readOnly = true)
     public Page<MyProjectPreviewResponseDTO> getMyProjects(Long userId, String statusFilter, Pageable pageable)
@@ -272,7 +280,63 @@ public class ProjectService {
         if(!project.getAuthor().getUserId().equals(user.getUserId()))
             throw new GeneralException(ErrorCode.AUTHOR_MISMATCHED);
 
-        project.setStatus(req.getStatus());
+        ProjectStatus current = project.getStatus();
+        ProjectStatus next = req.getStatus();
+
+        validateStatusTransition(current, next);
+
+        if (next == ProjectStatus.IN_PROGRESS) {
+            project.setStatus(ProjectStatus.IN_PROGRESS);
+            chatService.createChatRoomForProject(project);
+            notifyMembersStarted(project);
+        } else if (next == ProjectStatus.COMPLETED) {
+            project.setStatus(ProjectStatus.COMPLETED);
+            completeAllMembers(project);
+        } else {
+            throw new GeneralException(ErrorCode.INVALID_STATUS_TRANSITION);
+        }
+    }
+
+    private void validateStatusTransition(ProjectStatus current, ProjectStatus next) {
+        boolean valid = switch (current) {
+            case RECRUITMENT_CLOSED -> next == ProjectStatus.IN_PROGRESS;
+            case IN_PROGRESS -> next == ProjectStatus.COMPLETED;
+            default -> false;
+        };
+        if (!valid) {
+            throw new GeneralException(ErrorCode.INVALID_STATUS_TRANSITION);
+        }
+    }
+
+    private void completeAllMembers(Project project) {
+        List<ProjectMember> members = projectMemberRepository.findAllByProject(project);
+        LocalDateTime now = LocalDateTime.now();
+        for (ProjectMember m : members) {
+            if (m.getStatus() == MemberStatus.IN_PROGRESS) {
+                m.setStatus(MemberStatus.COMPLETED);
+                m.setCompletedAt(now);
+                notificationService.createNotification(
+                        m.getUser().getUserId(),
+                        NotificationType.APPLICATION_APPROVED,
+                        "프로젝트가 완료되었어요 🎉",
+                        "'" + project.getTitle() + "' 프로젝트가 완료되었습니다. 팀원 후기를 작성해주세요.",
+                        "/mypage/reviews",
+                        project.getId());
+            }
+        }
+    }
+
+    private void notifyMembersStarted(Project project) {
+        List<ProjectMember> members = projectMemberRepository.findAllByProject(project);
+        for (ProjectMember m : members) {
+            notificationService.createNotification(
+                    m.getUser().getUserId(),
+                    NotificationType.APPLICATION_APPROVED,
+                    "프로젝트가 시작되었어요! 🚀",
+                    "'" + project.getTitle() + "' 프로젝트가 진행을 시작했습니다. 대화방에서 팀원들과 소통해보세요!",
+                    "/projects/" + project.getId(),
+                    project.getId());
+        }
     }
 
     private void validateRecruitmentRole(RecruitmentCategory category, String name) {
