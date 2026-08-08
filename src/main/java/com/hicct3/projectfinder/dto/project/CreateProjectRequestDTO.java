@@ -1,5 +1,6 @@
 package com.hicct3.projectfinder.dto.project;
 
+import com.hicct3.projectfinder.dto.project.recruitment.CreateRecruitmentRequestDTO;
 import com.hicct3.projectfinder.entity.enums.CollaborationType;
 import com.hicct3.projectfinder.entity.enums.GoalType;
 import jakarta.validation.constraints.NotBlank;
@@ -49,7 +50,5 @@ public class CreateProjectRequestDTO {
 
     @NotNull
     private List<CreateRecruitmentRequestDTO> recruitments;
-
-    private List<CreateQuestionRequestDTO> questions;
 
 }

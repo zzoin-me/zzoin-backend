@@ -40,7 +40,5 @@ public class UpdateProjectRequestDTO {
 
     private List<UpdateRecruitmentRequestDTO> recruitments;
 
-    private List<CreateQuestionRequestDTO> questions;
-
 
 }

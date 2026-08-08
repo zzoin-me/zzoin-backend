@@ -1,30 +1,16 @@
 package com.hicct3.projectfinder.service;
 
-import com.hicct3.projectfinder.dto.project.CreateProjectRequestDTO;
-import com.hicct3.projectfinder.dto.project.UpdateProjectRequestDTO;
-import com.hicct3.projectfinder.dto.project.UpdateProjectStatusRequestDTO;
+import com.hicct3.projectfinder.dto.project.*;
 import com.hicct3.projectfinder.dto.project.myproject.MyApplicationPreviewResponseDTO;
 import com.hicct3.projectfinder.dto.project.myproject.MyProjectPreviewResponseDTO;
 import com.hicct3.projectfinder.entity.Project;
-import com.hicct3.projectfinder.entity.ProjectMember;
-import com.hicct3.projectfinder.entity.ProjectQuestion;
-import com.hicct3.projectfinder.entity.ProjectRecruitment;
-import com.hicct3.projectfinder.entity.User;
-import com.hicct3.projectfinder.entity.enums.ApplicationStatus;
-import com.hicct3.projectfinder.entity.enums.MemberStatus;
-import com.hicct3.projectfinder.entity.enums.NotificationType;
-import com.hicct3.projectfinder.entity.enums.ProjectStatus;
-import com.hicct3.projectfinder.entity.enums.RecruitmentCategory;
-import com.hicct3.projectfinder.entity.enums.RecruitmentRole;
+import com.hicct3.projectfinder.entity.enums.*;
+import com.hicct3.projectfinder.dto.project.review.*;
+import com.hicct3.projectfinder.entity.*;
 import com.hicct3.projectfinder.global.ErrorCode;
 import com.hicct3.projectfinder.global.GeneralException;
-import com.hicct3.projectfinder.repository.ProjectApplicationRepository;
-import com.hicct3.projectfinder.repository.ProjectMemberRepository;
-import com.hicct3.projectfinder.repository.ProjectQuestionRepository;
-import com.hicct3.projectfinder.repository.ProjectRecruitmentRepository;
-import com.hicct3.projectfinder.repository.ProjectRepository;
-import com.hicct3.projectfinder.repository.UserRepository;
-import org.springframework.transaction.annotation.Transactional;
+import com.hicct3.projectfinder.repository.*;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -32,9 +18,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -43,38 +28,256 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final ProjectRecruitmentRepository projectRecruitmentRepository;
     private final ProjectApplicationRepository projectApplicationRepository;
-    private final ProjectQuestionRepository projectQuestionRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final MemberReviewRepository memberReviewRepository;
+    private final JobRoleRepository jobRoleRepository;
+    private final JobCategoryRepository jobCategoryRepository;
     private final UserRepository userRepository;
-    private final NotificationService notificationService;
-    private final ChatService chatService;
+    private final RecruitmentService recruitmentService;
 
-    @Transactional(readOnly = true)
-    public Page<MyProjectPreviewResponseDTO> getMyProjects(Long userId, String statusFilter, Pageable pageable)
+    @Transactional
+    public void createReview(Long userId, Long projectId, CreateReviewRequestDTO req) {
+        var project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new GeneralException(ErrorCode.PROJECT_NOT_FOUND));
+
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorCode.USER_NOT_FOUND));
+
+        // 프로젝트가 종료되었는지
+        if (project.getStatus() != ProjectStatus.COMPLETED) {
+            throw new GeneralException(ErrorCode.PROJECT_NOT_COMPLETED);
+        }
+
+        // 작성자가 프로젝트 멤버인지
+        if (!projectMemberRepository.existsByUserAndProject(user, project)) {
+            throw new GeneralException(ErrorCode.PROJECT_MEMBER_NOT_FOUND);
+        }
+
+        // 이미 평가를 작성했는지
+        if (memberReviewRepository.existsByAuthorAndProject(user, project)) {
+            throw new GeneralException(ErrorCode.ALREADY_REVIEWED);
+        }
+
+        List<Long> targetIds = req.getMembers().stream()
+                .map(CreateMemberReviewRequestDTO::getUserId)
+                .toList();
+
+        // 자기 자신 평가 금지
+        if (targetIds.contains(userId)) {
+            throw new GeneralException(ErrorCode.CANNOT_REVIEW_SELF);
+        }
+
+        // 중복 평가 대상
+        if (targetIds.size() != new HashSet<>(targetIds).size()) {
+            throw new GeneralException(ErrorCode.USER_ID_DUPLICATE);
+        }
+
+        // 프로젝트 멤버 조회
+        List<ProjectMember> projectMembers = projectMemberRepository.findAllByProject(project);
+
+        // 자기 자신을 제외한 모든 프로젝트 멤버 ID
+        Set<Long> expectedTargetIds = projectMembers.stream()
+                .map(pm -> pm.getUser().getUserId())
+                .filter(id -> !id.equals(userId))
+                .collect(Collectors.toSet());
+
+        Set<Long> requestTargetIds = new HashSet<>(targetIds);
+
+        // 일부만 평가하거나, 프로젝트 외 유저를 포함한 경우
+        if (!expectedTargetIds.equals(requestTargetIds)) {
+            throw new GeneralException(ErrorCode.REVIEW_TARGET_INVALID);
+        }
+
+        // 평가 대상 유저 조회
+        Map<Long, User> targetUsers = userRepository.findAllById(targetIds).stream()
+                .collect(Collectors.toMap(User::getUserId, Function.identity()));
+
+        if (targetUsers.size() != targetIds.size()) {
+            throw new GeneralException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        List<MemberReview> reviews = req.getMembers().stream()
+                .map(member -> MemberReview.builder()
+                        .contribution(member.getContribution())
+                        .participation(member.getParticipation())
+                        .responsibility(member.getResponsibility())
+                        .comment(member.getComment())
+                        .author(user)
+                        .target(targetUsers.get(member.getUserId()))
+                        .project(project)
+                        .createdAt(LocalDateTime.now())
+                        .build())
+                .toList();
+
+        memberReviewRepository.saveAll(reviews);
+    }
+
+    //해당 프로젝트의 맴버 목록 조회
+    @Transactional
+    public MembersResponseDTO getMembers(Long userId, Long projectId)
+    {
+        var project = projectRepository.findById(projectId).orElseThrow(()->new GeneralException(ErrorCode.PROJECT_NOT_FOUND));
+        var user = userRepository.findById(userId).orElseThrow(()->new GeneralException(ErrorCode.USER_NOT_FOUND));
+
+        //user가 project에 참여중인지 확인
+        if(!projectMemberRepository.existsByUserAndProject(user, project))
+            throw new GeneralException(ErrorCode.USER_NOT_IN_PROJECT);
+
+        //해당 프로젝트의 팀원 목록 조회해서 반환
+        return MembersResponseDTO.builder()
+                .members(
+                        projectMemberRepository.findAllByProject(project)
+                                .stream()
+                                .map(MemberResponseDTO::from)
+                                .toList()
+                )
+                .build();
+    }
+
+    @Transactional
+    public Page<MyReviewableProjectResponseDTO> getMyReviewableProjects(
+            Long userId,
+            Pageable pageable
+    ) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorCode.USER_NOT_FOUND));
+
+        Page<ProjectMember> members = projectMemberRepository
+                .findByUserAndProject_Status(
+                        user,
+                        ProjectStatus.COMPLETED,
+                        pageable
+                );
+
+        return members.map(member -> {
+
+            Project project = member.getProject();
+
+            long reviewedCount =
+                    memberReviewRepository.countByAuthorAndProject(user, project);
+
+            long totalReviewCount =
+                    memberReviewRepository.countByProject(project);
+
+            boolean reviewCompleted = reviewedCount >= totalReviewCount;
+
+            return MyReviewableProjectResponseDTO.builder()
+                    .projectId(project.getId())
+                    .title(project.getTitle())
+                    .recruitment(member.getJobName())
+                    .joinedAt(member.getJoinedAt())
+                    .completedAt(member.getCompletedAt())
+                    .reviewCompleted(reviewCompleted)
+                    .build();
+        });
+    }
+
+    //내가 작성한 팀원 평가 조회
+    @Transactional
+    public MemberReviewsResponseDTO getMyReviews(Long userId, Long projectId)
+    {
+        var project = projectRepository.findById(projectId).orElseThrow(()->new GeneralException(ErrorCode.PROJECT_NOT_FOUND));
+        var user = userRepository.findById(userId).orElseThrow(()->new GeneralException(ErrorCode.USER_NOT_FOUND));
+
+        //user가 project에 참여중인지 확인
+        if(!projectMemberRepository.existsByUserAndProject(user, project))
+            throw new GeneralException(ErrorCode.USER_NOT_IN_PROJECT);
+
+        Map<User, List<String>> recruitmentMap = projectMemberRepository
+                .findAllByProject(project)
+                .stream()
+                .collect(Collectors.groupingBy(
+                        ProjectMember::getUser,
+                        Collectors.mapping(ProjectMember::getJobName, Collectors.toList())
+                ));
+
+        List<MemberReviewResponseDTO> result = memberReviewRepository
+                .findAllByAuthorAndProject(user, project)
+                .stream()
+                .map(memberReview -> MemberReviewResponseDTO.builder()
+                        .memberId(memberReview.getId())
+                        .nickname(memberReview.getTarget().getNickName())
+                        .recruitments(recruitmentMap.get(memberReview.getTarget()))
+                        .profileUrl(memberReview.getTarget().getProfileUrl())
+                        .contribution(memberReview.getContribution())
+                        .responsibility(memberReview.getResponsibility())
+                        .participation(memberReview.getParticipation())
+                        .build())
+                .toList();
+
+        return MemberReviewsResponseDTO.builder()
+                .members(result)
+                .build();
+
+    }
+
+    // 내가 받은 평가 조회
+    @Transactional
+    public MyReviewsResponseDTO getReceivedReviews(Long userId) {
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorCode.USER_NOT_FOUND));
+
+        var reviews = memberReviewRepository.findAllByTarget(user);
+
+        int[] scores = new int[6];
+        int totalScore = 0;
+        int totalCount = 0;
+
+        // 점수 집계
+        for (MemberReview review : reviews) {
+            scores[review.getContribution()]++;
+            scores[review.getParticipation()]++;
+            scores[review.getResponsibility()]++;
+
+            totalScore += review.getContribution();
+            totalScore += review.getParticipation();
+            totalScore += review.getResponsibility();
+
+            totalCount += 3;
+        }
+
+        double averageScore = totalCount == 0
+                ? 0.0
+                : Math.round((double) totalScore / totalCount * 10) / 10.0; // 소수 첫째 자리
+
+        var reviewDtos = reviews.stream()
+                .map(review -> MyReviewResponseDTO.builder()
+                        .projectName(review.getProject().getTitle())
+                        .comment(review.getComment())
+                        .contribution(review.getContribution())
+                        .responsibility(review.getResponsibility())
+                        .participation(review.getParticipation())
+                        .createdAt(review.getCreatedAt())
+                        .avgRating(review.getAverage())
+                        .build())
+                .toList();
+
+        return MyReviewsResponseDTO.builder()
+                .reviews(reviewDtos)
+                .ratingAvg(averageScore)   // DTO에 필드 추가 필요
+                .score1(scores[1])
+                .score2(scores[2])
+                .score3(scores[3])
+                .score4(scores[4])
+                .score5(scores[5])
+                .build();
+    }
+
+    @Transactional
+    public Page<MyProjectPreviewResponseDTO> getMyProjects(Long userId, Pageable pageable)
     {
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorCode.USER_NOT_FOUND));
 
-        Page<Project> projects;
-        if ("RECRUITING".equals(statusFilter)) {
-            projects = projectRepository.findAllByAuthorAndDeletedAtIsNullAndStatusOrderByIdDesc(user, ProjectStatus.RECRUITING, pageable);
-        } else if ("CLOSED".equals(statusFilter)) {
-            projects = projectRepository.findAllByAuthorAndDeletedAtIsNullAndStatusNotOrderByIdDesc(user, ProjectStatus.RECRUITING, pageable);
-        } else {
-            projects = projectRepository.findAllByAuthorAndDeletedAtIsNullOrderByIdDesc(user, pageable);
-        }
-
-        List<MyProjectPreviewResponseDTO> dtos = projects.getContent().stream()
+        return projectRepository.findAllByAuthorAndDeletedAtIsNull(user, pageable)
                 .map(project -> MyProjectPreviewResponseDTO.from(
                         project,
                         projectRecruitmentRepository.findAllByProjectAndDeletedAtIsNull(project)
-                ))
-                .collect(Collectors.toList());
-
-        return new PageImpl<>(dtos, pageable, projects.getTotalElements());
+                ));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public Page<MyApplicationPreviewResponseDTO> getMyApplications(Long userId, ApplicationStatus status, Pageable pageable)
     {
         var user = userRepository.findById(userId)
@@ -84,77 +287,41 @@ public class ProjectService {
                 ? projectApplicationRepository.findAllByUserAndStatus(user, status, pageable)
                 : projectApplicationRepository.findAllByUser(user, pageable);
 
-        List<MyApplicationPreviewResponseDTO> dtos = applications.getContent().stream()
-                .map(MyApplicationPreviewResponseDTO::from)
-                .collect(Collectors.toList());
-
-        return new PageImpl<>(dtos, pageable, applications.getTotalElements());
+        return applications.map(MyApplicationPreviewResponseDTO::from);
     }
 
+    //프로젝트 생성
     @Transactional
-    public void createProject(Long userId, CreateProjectRequestDTO req)
-    {
-        var user = userRepository.findById(userId).orElseThrow(()->new GeneralException(ErrorCode.USER_NOT_FOUND));
+    public void createProject(Long userId, CreateProjectRequestDTO req) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorCode.USER_NOT_FOUND));
 
-        if(req.getRecruitments().isEmpty())
+        if (req.getRecruitments() == null || req.getRecruitments().isEmpty()) {
             throw new GeneralException(ErrorCode.RECRUITMENT_EMPTY);
+        }
 
-        var project = Project.builder()
-                .title(req.getTitle())
-                .description(req.getDescription())
-                .collaborationType(req.getCollaborationType())
-                .communicationTool(req.getCommunicationTool())
-                .meetingSchedule(req.getMeetingSchedule())
-                .period(req.getPeriod())
-                .recruitmentDeadline(req.getRecruitmentDeadline())
-                .goal(req.getGoalType())
-                .imageUrl(req.getImageUrl())
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .deletedAt(null)
-                .author(user)
-                .status(ProjectStatus.RECRUITING)
+        //프로젝트 엔티티 생성
+        Project savedProject = projectRepository.save(Project.create(req, user));
+
+        //직군 저장
+        recruitmentService.createRecruitments(savedProject, req.getRecruitments());
+
+        //생성자를 멤버로 할당
+        var member = ProjectMember.builder()
+                .status(MemberStatus.IN_PROGRESS)
+                .user(user)
+                .project(savedProject)
+                .role(Role.OWNER)
+                .joinedAt(LocalDateTime.now())
                 .build();
 
-        var savedProject = projectRepository.save(project);
-
-        req.getRecruitments().forEach(x->
-        {
-            validateRecruitmentRole(x.getCategory(), x.getName());
-            projectRecruitmentRepository.save(ProjectRecruitment.builder()
-                    .name(x.getName())
-                    .category(x.getCategory())
-                    .recruitmentCount(x.getCount())
-                    .qualification(x.getQualification())
-                    .preferred(x.getPreferred())
-                    .applicantCount(0)
-                    .project(savedProject)
-                    .build());
-        });
-
-        saveQuestions(savedProject, req.getQuestions());
+        projectMemberRepository.save(member);
 
     }
 
-    private void saveQuestions(Project project, java.util.List<com.hicct3.projectfinder.dto.project.CreateQuestionRequestDTO> questions) {
-        if (questions == null || questions.isEmpty()) return;
-        if (questions.size() > 10) {
-            throw new GeneralException(ErrorCode.QUESTION_LIMIT_EXCEEDED);
-        }
-        for (int i = 0; i < questions.size(); i++) {
-            var q = questions.get(i);
-            projectQuestionRepository.save(ProjectQuestion.builder()
-                    .project(project)
-                    .orderIndex(i)
-                    .type(q.getType())
-                    .label(q.getLabel())
-                    .options(q.getOptions() != null && !q.getOptions().isEmpty() ? String.join(",", q.getOptions()) : null)
-                    .required(q.getRequired())
-                    .createdAt(LocalDateTime.now())
-                    .build());
-        }
-    }
 
+
+    //프로젝트 수정
     @Transactional
     public void updateProject(Long userId, Long projectId, UpdateProjectRequestDTO req)
     {
@@ -200,57 +367,12 @@ public class ProjectService {
 
         if(req.getRecruitments() != null)
         {
-            if(req.getRecruitments().isEmpty())
-                throw new GeneralException(ErrorCode.RECRUITMENT_EMPTY);
-
-            List<ProjectRecruitment> existingRecruitments =
-                    projectRecruitmentRepository.findAllByProjectAndDeletedAtIsNull(project);
-
-            Set<Long> requestedRecruitmentIds = new HashSet<>();
-
-            for (var x : req.getRecruitments()) {
-                validateRecruitmentRole(x.getCategory(), x.getName());
-                if (x.getRecruitmentId() == null) {
-                    ProjectRecruitment newRecruitment = ProjectRecruitment.builder()
-                            .name(x.getName())
-                            .category(x.getCategory())
-                            .applicantCount(0)
-                            .recruitmentCount(x.getCount())
-                            .qualification(x.getQualification())
-                            .preferred(x.getPreferred())
-                            .project(project)
-                            .build();
-
-                    projectRecruitmentRepository.save(newRecruitment);
-                    continue;
-                }
-
-                ProjectRecruitment recruitment = existingRecruitments.stream()
-                        .filter(r -> r.getId().equals(x.getRecruitmentId()))
-                        .findFirst()
-                        .orElseThrow(() -> new GeneralException(ErrorCode.RECRUITMENT_NOT_FOUND));
-
-                requestedRecruitmentIds.add(recruitment.getId());
-
-                recruitment.setName(x.getName());
-                recruitment.setCategory(x.getCategory());
-                recruitment.setRecruitmentCount(x.getCount());
-                recruitment.setQualification(x.getQualification());
-                recruitment.setPreferred(x.getPreferred());
-            }
-
-            existingRecruitments.stream()
-                    .filter(recruitment -> !requestedRecruitmentIds.contains(recruitment.getId()))
-                    .forEach(recruitment -> recruitment.setDeletedAt(LocalDateTime.now()));
-        }
-
-        if(req.getQuestions() != null) {
-            projectQuestionRepository.findAllByProjectInAndDeletedAtIsNull(List.of(project))
-                    .forEach(q -> q.setDeletedAt(LocalDateTime.now()));
-            saveQuestions(project, req.getQuestions());
+            recruitmentService.updateRecruitments(project, req.getRecruitments());
         }
     }
 
+
+    //프로젝트 제거
     @Transactional
     public void deleteProject(Long userId, Long projectId)
     {
@@ -266,11 +388,15 @@ public class ProjectService {
        project.setDeletedAt(LocalDateTime.now());
     }
 
+    //프로젝트 상태 변경
     @Transactional
     public void setProjectStatus(Long userId, Long projectId, UpdateProjectStatusRequestDTO req)
     {
         var user = userRepository.findById(userId).orElseThrow(()->new GeneralException(ErrorCode.USER_NOT_FOUND));
         var project = projectRepository.findById(projectId).orElseThrow(()->new GeneralException(ErrorCode.PROJECT_NOT_FOUND));
+
+        if(project.getStatus().equals(ProjectStatus.COMPLETED))
+            throw new GeneralException(ErrorCode.PROJECT_ALREADY_COMPLETED);
 
         if(project.getDeletedAt() != null)
         {
@@ -280,76 +406,16 @@ public class ProjectService {
         if(!project.getAuthor().getUserId().equals(user.getUserId()))
             throw new GeneralException(ErrorCode.AUTHOR_MISMATCHED);
 
-        ProjectStatus current = project.getStatus();
-        ProjectStatus next = req.getStatus();
-
-        validateStatusTransition(current, next);
-
-        if (next == ProjectStatus.IN_PROGRESS) {
-            project.setStatus(ProjectStatus.IN_PROGRESS);
-            chatService.createChatRoomForProject(project);
-            notifyMembersStarted(project);
-        } else if (next == ProjectStatus.COMPLETED) {
-            project.setStatus(ProjectStatus.COMPLETED);
-            completeAllMembers(project);
-        } else {
-            throw new GeneralException(ErrorCode.INVALID_STATUS_TRANSITION);
-        }
-    }
-
-    private void validateStatusTransition(ProjectStatus current, ProjectStatus next) {
-        boolean valid = switch (current) {
-            case RECRUITMENT_CLOSED -> next == ProjectStatus.IN_PROGRESS;
-            case IN_PROGRESS -> next == ProjectStatus.COMPLETED;
-            default -> false;
-        };
-        if (!valid) {
-            throw new GeneralException(ErrorCode.INVALID_STATUS_TRANSITION);
-        }
-    }
-
-    private void completeAllMembers(Project project) {
-        List<ProjectMember> members = projectMemberRepository.findAllByProject(project);
-        LocalDateTime now = LocalDateTime.now();
-        for (ProjectMember m : members) {
-            if (m.getStatus() == MemberStatus.IN_PROGRESS) {
-                m.setStatus(MemberStatus.COMPLETED);
-                m.setCompletedAt(now);
-                notificationService.createNotification(
-                        m.getUser().getUserId(),
-                        NotificationType.APPLICATION_APPROVED,
-                        "프로젝트가 완료되었어요 🎉",
-                        "'" + project.getTitle() + "' 프로젝트가 완료되었습니다. 팀원 후기를 작성해주세요.",
-                        "/mypage/reviews",
-                        project.getId());
+        if(req.getStatus().equals(ProjectStatus.COMPLETED))
+        {
+            for (ProjectMember projectMember : projectMemberRepository.findAllByProject(project)) {
+                projectMember.setCompletedAt(LocalDateTime.now());
+                projectMember.setStatus(MemberStatus.COMPLETED);
             }
         }
+
+        project.setStatus(req.getStatus());
     }
 
-    private void notifyMembersStarted(Project project) {
-        List<ProjectMember> members = projectMemberRepository.findAllByProject(project);
-        for (ProjectMember m : members) {
-            notificationService.createNotification(
-                    m.getUser().getUserId(),
-                    NotificationType.APPLICATION_APPROVED,
-                    "프로젝트가 시작되었어요! 🚀",
-                    "'" + project.getTitle() + "' 프로젝트가 진행을 시작했습니다. 대화방에서 팀원들과 소통해보세요!",
-                    "/projects/" + project.getId(),
-                    project.getId());
-        }
-    }
-
-    private void validateRecruitmentRole(RecruitmentCategory category, String name) {
-        if (category == null) {
-            return;
-        }
-        if (name == null || name.isBlank()) {
-            throw new GeneralException(ErrorCode.INVALID_RECRUITMENT_ROLE);
-        }
-        var allowed = RecruitmentRole.displayNamesByCategory(category);
-        if (!allowed.contains(name)) {
-            throw new GeneralException(ErrorCode.INVALID_RECRUITMENT_ROLE);
-        }
-    }
 }
 

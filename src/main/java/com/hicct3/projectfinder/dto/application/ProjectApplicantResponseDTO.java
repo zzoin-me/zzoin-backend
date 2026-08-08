@@ -2,7 +2,7 @@ package com.hicct3.projectfinder.dto.application;
 
 import com.hicct3.projectfinder.entity.*;
 import com.hicct3.projectfinder.entity.enums.ApplicationStatus;
-import com.hicct3.projectfinder.entity.enums.RecruitmentCategory;
+import com.hicct3.projectfinder.entity.enums.JobCategoryCode;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -19,7 +19,7 @@ public class ProjectApplicantResponseDTO {
     private String nickName;
     private String profileUrl;
     private String recruitmentName;
-    private RecruitmentCategory recruitmentCategory;
+    private JobCategoryCode recruitmentCategory;
     private List<String> stackNames;
     private LocalDateTime applicationDate;
     private String letter;
@@ -31,17 +31,15 @@ public class ProjectApplicantResponseDTO {
 
     private List<ProjectMemberResponseDTO> histories;
 
-    private List<AnswerResponseDTO> answers;
-
-    public static ProjectApplicantResponseDTO from(ProjectApplication application, List<ProjectMember> members, List<AnswerResponseDTO> answers)
+    public static ProjectApplicantResponseDTO from(ProjectApplication application, List<ProjectMember> members)
     {
         return ProjectApplicantResponseDTO.builder()
                 .applicationId(application.getId())
                 .userId(application.getUser().getUserId())
                 .nickName(application.getUser().getNickName())
                 .profileUrl(application.getUser().getProfileUrl())
-                .recruitmentName(application.getRecruitment().getName())
-                .recruitmentCategory(application.getRecruitment().getCategory())
+                .recruitmentName(application.getRecruitment().getJobRole().getName())
+                .recruitmentCategory(application.getRecruitment().getJobRole().getJobCategory().getCategoryCode())
                 .stackNames(application.getUser().getStacks().stream().map(Stack::getName).toList())
                 .applicationDate(application.getCreatedAt())
                 .letter(application.getLetter())
@@ -51,7 +49,6 @@ public class ProjectApplicantResponseDTO {
                 .ratingAvg(application.getUser().getRatingAvg())
                 .status(application.getStatus())
                 .histories(members.stream().map(ProjectMemberResponseDTO::from).toList())
-                .answers(answers)
                 .build();
     }
 }

@@ -1,11 +1,8 @@
 package com.hicct3.projectfinder.service;
 
 import com.hicct3.projectfinder.dto.project.*;
-import com.hicct3.projectfinder.entity.Project;
-import com.hicct3.projectfinder.entity.ProjectRecruitment;
 import com.hicct3.projectfinder.entity.enums.GoalType;
-import com.hicct3.projectfinder.entity.enums.ProjectStatus;
-import com.hicct3.projectfinder.entity.enums.RecruitmentCategory;
+import com.hicct3.projectfinder.entity.enums.JobCategoryCode;
 import com.hicct3.projectfinder.entity.enums.SortType;
 import com.hicct3.projectfinder.global.ErrorCode;
 import com.hicct3.projectfinder.global.GeneralException;
@@ -14,15 +11,13 @@ import com.hicct3.projectfinder.repository.ProjectRecruitmentRepository;
 import com.hicct3.projectfinder.repository.ProjectRepository;
 import com.hicct3.projectfinder.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
-import org.springframework.transaction.annotation.Transactional;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -52,70 +47,41 @@ public class ProjectQueryService {
         return ProjectDetailResponseDTO.from(project, recruitments, questions);
     }
 
-    @Transactional(readOnly = true)
-    public Page<ProjectPreviewResponseDTO> getProjectList(SortType sort, String keyword, List<RecruitmentCategory> categories, List<String> names, Integer maxDays, Integer minCount, Integer maxCount, List<GoalType> goals, Boolean recruitingOnly, Pageable pageable)
+    @Transactional
+    public Page<ProjectPreviewResponseDTO> getProjectList(SortType sort, String keyword, JobCategoryCode category, String name, Integer maxDays, Integer minCount, Integer maxCount, GoalType goal, Boolean recruitingOnly, Pageable pageable)
     {
-        Page<Project> projects = projectRepository.searchProjects(sort, keyword, categories, names, maxDays, minCount, maxCount, goals, recruitingOnly, pageable);
-
-        List<Project> content = projects.getContent();
-        Map<Long, List<ProjectRecruitment>> recruitmentMap = projectRecruitmentRepository
-                .findAllByProjectInAndDeletedAtIsNull(content)
-                .stream()
-                .collect(Collectors.groupingBy(r -> r.getProject().getId()));
-
-        List<ProjectPreviewResponseDTO> dtos = content.stream().map(project -> ProjectPreviewResponseDTO.from(
-                project,
-                recruitmentMap.getOrDefault(project.getId(), List.of())
-        )).collect(Collectors.toList());
-
-        return new PageImpl<>(dtos, pageable, projects.getTotalElements());
+        return projectRepository.searchProjects(sort, keyword, category, name, maxDays, minCount, maxCount, goal, recruitingOnly, pageable).map(
+                project -> ProjectPreviewResponseDTO.from(project,
+                        projectRecruitmentRepository.findByProject(project))
+        );
     }
 
     @Transactional
-    public Map<RecruitmentCategory, Long> countProjectsPerCategory()
+    public Map<JobCategoryCode, Long> countProjectsPerCategory()
     {
         return projectRepository.countProjectsPerCategory();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public Page<ProjectPreviewResponseDTO> getPopularProjects(Pageable pageable)
     {
-        Page<Project> projects = projectRepository.findPopularProjects(pageable);
-
-        List<Project> content = projects.getContent();
-        Map<Long, List<ProjectRecruitment>> recruitmentMap = projectRecruitmentRepository
-                .findAllByProjectInAndDeletedAtIsNull(content)
-                .stream()
-                .collect(Collectors.groupingBy(r -> r.getProject().getId()));
-
-        List<ProjectPreviewResponseDTO> dtos = content.stream().map(project -> ProjectPreviewResponseDTO.from(
-                project,
-                recruitmentMap.getOrDefault(project.getId(), List.of())
-        )).collect(Collectors.toList());
-
-        return new PageImpl<>(dtos, pageable, projects.getTotalElements());
+        return projectRepository.findPopularProjects(pageable).map(
+                project -> ProjectPreviewResponseDTO.from(project,
+                        projectRecruitmentRepository.findByProject(project))
+        );
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public Page<ProjectPreviewResponseDTO> getRecommendProjects(Long userId, Pageable pageable)
     {
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorCode.USER_NOT_FOUND));
         List<String> userFields = user.getFields();
 
-        Page<Project> projects = projectRepository.findRecommendProjects(userId, userFields, pageable);
-
-        List<Project> content = projects.getContent();
-        Map<Long, List<ProjectRecruitment>> recruitmentMap = projectRecruitmentRepository
-                .findAllByProjectInAndDeletedAtIsNull(content)
-                .stream()
-                .collect(Collectors.groupingBy(r -> r.getProject().getId()));
-
-        List<ProjectPreviewResponseDTO> dtos = content.stream().map(project -> ProjectPreviewResponseDTO.from(
-                project,
-                recruitmentMap.getOrDefault(project.getId(), List.of())
-        )).collect(Collectors.toList());
-
-        return new PageImpl<>(dtos, pageable, projects.getTotalElements());
+        return projectRepository.findRecommendProjects(userId, userFields, pageable).map(
+                project -> ProjectPreviewResponseDTO.from(project,
+                        projectRecruitmentRepository.findByProject(project))
+        );
     }
+
 }

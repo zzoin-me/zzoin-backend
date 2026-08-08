@@ -12,6 +12,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
+import org.springframework.stereotype.Service;
+
+import java.util.LinkedHashSet;
 
 @Service
 @RequiredArgsConstructor
@@ -106,6 +109,9 @@ public class UserService {
 
             if (stacks.size() != distinctStackIds.size())
                 throw new GeneralException(ErrorCode.STACK_NOT_FOUND);
+
+            if(stacks.size() > 7)
+                throw new GeneralException(ErrorCode.STACK_SIZE_EXCEEDED);
 
             user.setStacks(stacks);
         }
