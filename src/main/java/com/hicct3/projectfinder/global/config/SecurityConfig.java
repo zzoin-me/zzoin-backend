@@ -131,6 +131,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/posts/{postId}/comments").permitAll()
                         .requestMatchers("/api/posts/**").hasRole("VERIFIED")
                         .requestMatchers("/api/comments/**").hasRole("VERIFIED")
+                        .requestMatchers(HttpMethod.GET, "/api/notifications/stream").permitAll()
+                        .requestMatchers("/api/notifications/**").authenticated()
                         .anyRequest().authenticated()
                 )
 

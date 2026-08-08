@@ -59,10 +59,6 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
         where = where.and(goalContains(goals));
         where = where.and(recruitingOnlyContains(recruitingOnly));
 
-        if (sortType == SortType.POPULAR) {
-            where = where.and(project.status.eq(ProjectStatus.RECRUITING));
-        }
-
         List<Project> content = queryFactory
                 .selectFrom(project)
                 .where(where)
@@ -112,9 +108,7 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
         QProject project = QProject.project;
         QProjectRecruitment recruitment = QProjectRecruitment.projectRecruitment;
 
-        BooleanExpression where = project.deletedAt.isNull()
-                .and(project.status.eq(ProjectStatus.RECRUITING))
-                .and(project.author.userId.ne(userId));
+        BooleanExpression where = project.deletedAt.isNull();
 
         List<Long> appliedProjectIds = queryFactory
                 .select(recruitment.project.id)
@@ -211,8 +205,7 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
         QProject project = QProject.project;
         QProjectRecruitment recruitment = QProjectRecruitment.projectRecruitment;
 
-        BooleanExpression where = project.deletedAt.isNull()
-                .and(project.status.eq(ProjectStatus.RECRUITING));
+        BooleanExpression where = project.deletedAt.isNull();
 
         List<Project> allCandidates = queryFactory
                 .selectFrom(project)
@@ -221,8 +214,7 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
 
         List<Long> projectIds = allCandidates.stream().map(Project::getId).toList();
 
-        Map<Long, Long> applicantCounts = projectIds.isEmpty() ? Map.of() : queryFactory
-                .select(recruitment.project.id, QProjectApplication.projectApplication.count())
+        Map<Long, Long> applicantCounts = projectIds.isEmpty() ? Map.of() : queryFactory                .select(recruitment.project.id, QProjectApplication.projectApplication.count())
                 .from(QProjectApplication.projectApplication)
                 .join(QProjectApplication.projectApplication.recruitment, recruitment)
                 .where(recruitment.project.id.in(projectIds))

@@ -5,6 +5,7 @@ import com.hicct3.projectfinder.dto.community.CreateCommentRequestDTO;
 import com.hicct3.projectfinder.entity.Comment;
 import com.hicct3.projectfinder.entity.Post;
 import com.hicct3.projectfinder.entity.User;
+import com.hicct3.projectfinder.entity.enums.NotificationType;
 import com.hicct3.projectfinder.global.ErrorCode;
 import com.hicct3.projectfinder.global.GeneralException;
 import com.hicct3.projectfinder.repository.CommentRepository;
@@ -25,6 +26,7 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public CommentResponseDTO createComment(Long userId, Long postId, CreateCommentRequestDTO req) {
@@ -61,6 +63,29 @@ public class CommentService {
 
         Comment saved = commentRepository.save(comment);
         post.increaseCommentCount();
+
+        if (parent != null) {
+            if (!parent.getAuthor().getUserId().equals(userId) && !parent.getAuthor().getUserId().equals(post.getAuthor().getUserId())) {
+                notificationService.createNotification(
+                        parent.getAuthor().getUserId(),
+                        NotificationType.COMMENT_REPLY,
+                        "회원님의 댓글에 대댓글이 달렸어요",
+                        user.getNickName() + "님이 회원님의 댓글에 답글을 남겼어요.",
+                        "/community/" + post.getId(),
+                        post.getId());
+            }
+        } else {
+            if (!post.getAuthor().getUserId().equals(userId)) {
+                notificationService.createNotification(
+                        post.getAuthor().getUserId(),
+                        NotificationType.POST_COMMENT,
+                        "회원님의 게시글에 댓글이 달렸어요",
+                        user.getNickName() + "님이 '" + post.getTitle() + "'에 댓글을 남겼어요.",
+                        "/community/" + post.getId(),
+                        post.getId());
+            }
+        }
+
         return CommentResponseDTO.of(saved, userId);
     }
 
