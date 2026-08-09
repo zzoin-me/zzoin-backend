@@ -3,11 +3,14 @@ package com.hicct3.projectfinder.controller;
 import com.hicct3.projectfinder.global.ApiResponse;
 import com.hicct3.projectfinder.entity.Notification;
 import com.hicct3.projectfinder.global.CustomUserDetails;
+import com.hicct3.projectfinder.global.GeneralException;
 import com.hicct3.projectfinder.service.NotificationService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -62,10 +65,14 @@ public class NotificationController {
     }
 
     @Operation(summary = "SSE 알림 스트림")
-    @GetMapping("/stream")
-    public SseEmitter stream(@RequestParam String token) {
-        Long userId = notificationService.getUserIdFromToken(token);
-        return notificationService.subscribe(userId);
+    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public ResponseEntity<SseEmitter> stream(@RequestParam String token) {
+        try {
+            Long userId = notificationService.getUserIdFromToken(token);
+            return ResponseEntity.ok(notificationService.subscribe(userId));
+        } catch (GeneralException e) {
+            return ResponseEntity.status(e.getErrorCode().getStatus()).build();
+        }
     }
 
     @Operation(summary = "개별 알림 읽음 처리")

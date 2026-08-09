@@ -104,9 +104,9 @@ public class JwtProvider {
                     .parseSignedClaims(token)
                     .getPayload();
         } catch (ExpiredJwtException e) {
-            throw new GeneralException("토큰이 만료되었습니다. 다시 인증해주세요.");
-        } catch (Exception e) {
-            throw new GeneralException("유효하지 않거나 변조된 토큰입니다.");
+            throw new GeneralException(ErrorCode.TOKEN_EXPIRED);
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new GeneralException(ErrorCode.INVALID_TOKEN);
         }
     }
 }

@@ -15,6 +15,8 @@ public enum ErrorCode {
 
     // Auth
     AUTHENTICATION_FAILED(HttpStatus.BAD_REQUEST, "이메일 또는 비밀번호가 일치하지 않습니다."),
+    TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "토큰이 만료되었습니다. 다시 인증해주세요."),
+    INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않거나 변조된 토큰입니다."),
     INVALID_REFRESH_TOKEN(HttpStatus.BAD_REQUEST, "유효하지 않은 토큰입니다."),
     TOKEN_MISMATCH(HttpStatus.BAD_REQUEST, "토큰 정보가 일치하지 않습니다."),
     SIGNUP_EMAIL_MISMATCH(HttpStatus.BAD_REQUEST, "회원가입 인증 이메일과 요청 이메일이 일치하지 않습니다."),
