@@ -1,5 +1,6 @@
 package com.hicct3.projectfinder.entity;
 
+import com.hicct3.projectfinder.entity.enums.RecruitmentCategory;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -16,6 +17,13 @@ public class ProjectRecruitment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
+
+    @Column(nullable = false)
+    private String name;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private RecruitmentCategory category;
 
     @Column(nullable = false)
     private Integer applicantCount;
@@ -35,21 +43,4 @@ public class ProjectRecruitment {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id")
     private Project project;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "job_role_id")
-    private JobRole jobRole;
-
-    public void update(JobRole jobRole, Integer recruitmentCount, String qualification, String preferred)
-    {
-        this.jobRole = jobRole;
-        this.recruitmentCount = recruitmentCount;
-        this.qualification = qualification;
-        this.preferred = preferred;
-    }
-
-    public void delete()
-    {
-        this.deletedAt = LocalDateTime.now();
-    }
 }
