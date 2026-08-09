@@ -2,10 +2,8 @@ package com.hicct3.projectfinder.entity;
 
 import com.hicct3.projectfinder.entity.enums.ApplicationStatus;
 import com.hicct3.projectfinder.entity.enums.MemberStatus;
-import com.hicct3.projectfinder.entity.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.CreatedDate;
 
 import java.time.LocalDateTime;
 
@@ -24,7 +22,6 @@ public class ProjectMember {
     @Column(nullable = false)
     private MemberStatus status;
 
-    @CreatedDate
     @Column(nullable = false)
     private LocalDateTime joinedAt;
 
@@ -32,22 +29,14 @@ public class ProjectMember {
     private LocalDateTime completedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id")
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "project_id", nullable = false)
+    @JoinColumn(name = "project_id")
     private Project project;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "recruitment_id", nullable = true)
+    @JoinColumn(name = "recruitment_id")
     private ProjectRecruitment recruitment;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Role role;
-
-    public String getJobName() {
-        return recruitment != null ? recruitment.getJobRole().getName() : role.getName();
-    }
 }

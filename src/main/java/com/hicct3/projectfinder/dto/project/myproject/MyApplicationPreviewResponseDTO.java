@@ -2,7 +2,7 @@ package com.hicct3.projectfinder.dto.project.myproject;
 
 import com.hicct3.projectfinder.entity.ProjectApplication;
 import com.hicct3.projectfinder.entity.enums.ApplicationStatus;
-import com.hicct3.projectfinder.entity.enums.JobCategoryCode;
+import com.hicct3.projectfinder.entity.enums.RecruitmentCategory;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -17,7 +17,7 @@ public class MyApplicationPreviewResponseDTO {
     private Long projectId;
     private String projectTitle;
     private String appliedRecruitmentName;
-    private JobCategoryCode appliedRecruitmentCategory;
+    private RecruitmentCategory appliedRecruitmentCategory;
     private ApplicationStatus status;
     private LocalDateTime createdAt;
 
@@ -27,8 +27,8 @@ public class MyApplicationPreviewResponseDTO {
                 .applicationId(application.getId())
                 .projectId(application.getRecruitment().getProject().getId())
                 .projectTitle(application.getRecruitment().getProject().getTitle())
-                .appliedRecruitmentCategory(application.getRecruitment().getJobRole().getJobCategory().getCategoryCode())
-                .appliedRecruitmentName(application.getRecruitment().getJobRole().getName())
+                .appliedRecruitmentName(application.getRecruitment().getName())
+                .appliedRecruitmentCategory(application.getRecruitment().getCategory())
                 .status(application.getStatus())
                 .createdAt(application.getCreatedAt())
                 .build();

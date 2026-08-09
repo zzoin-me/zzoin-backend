@@ -28,7 +28,6 @@ public enum ErrorCode {
     DUPLICATE_VERIFIED_EMAIL(HttpStatus.BAD_REQUEST, "인증에 이용된 이메일입니다."),
     EMAIL_USED_BY_OTHER_ACCOUNT(HttpStatus.BAD_REQUEST, "이미 다른 계정에서 사용 중인 이메일입니다."),
     USER_NOT_VERIFIED(HttpStatus.BAD_REQUEST, "인증되지 않은 사용자입니다."),
-    USER_ID_DUPLICATE(HttpStatus.BAD_REQUEST, "중복되는 유저 ID입니다."),
 
     // Email
     EMAIL_SEND_FAILED(HttpStatus.BAD_REQUEST, "이메일 전송에 실패했습니다."),
@@ -42,7 +41,6 @@ public enum ErrorCode {
     // Stack
     STACK_NOT_FOUND(HttpStatus.BAD_REQUEST, "존재하지 않는 스택입니다."),
     STACK_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "이미 존재하는 스택입니다."),
-    STACK_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "스택은 최대 7개까지 선택할 수 있습니다."),
 
     // Univ
     UNIVERSITY_NOT_MATCHED(HttpStatus.BAD_REQUEST, "대학 id와 도메인이 일치하지 않습니다."),
@@ -52,14 +50,8 @@ public enum ErrorCode {
     PROJECT_DELETED(HttpStatus.BAD_REQUEST, "삭제된 프로젝트입니다."),
     PROJECT_ALREADY_DELETED(HttpStatus.BAD_REQUEST, "이미 삭제된 프로젝트입니다."),
     AUTHOR_MISMATCHED(HttpStatus.BAD_REQUEST, "작성자가 일치하지 않습니다."),
-    PROJECT_NOT_MATCHED(HttpStatus.BAD_REQUEST, "프로젝트가 일치하지 않습니다."),
-    USER_NOT_IN_PROJECT(HttpStatus.BAD_REQUEST, "프로젝트에 참여하지 않은 사용자입니다."),
-    PROJECT_NOT_COMPLETED(HttpStatus.BAD_REQUEST, "프로젝트가 완료되지 않았습니다."),
-    PROJECT_ALREADY_COMPLETED(HttpStatus.BAD_REQUEST, "프로젝트가 이미 완료되었습니다."),
-    PROJECT_MEMBER_NOT_FOUND(HttpStatus.BAD_REQUEST, "프로젝트 멤버를 찾을 수 없습니다."),
 
     // Recruitment
-    RECRUITMENT_DUPLICATE(HttpStatus.BAD_REQUEST, "중복된 모집입니다."),
     RECRUITMENT_NOT_FOUND(HttpStatus.BAD_REQUEST, "모집 정보를 찾을 수 없습니다."),
     RECRUITMENT_CLOSED(HttpStatus.BAD_REQUEST, "모집이 마감된 모집입니다."),
     RECRUITMENT_EMPTY(HttpStatus.BAD_REQUEST, "모집 정보가 존재하지 않습니다."),
@@ -68,20 +60,9 @@ public enum ErrorCode {
     ALREADY_APPLIED(HttpStatus.BAD_REQUEST, "이미 지원한 모집입니다."),
     APPLICATION_NOT_FOUND(HttpStatus.BAD_REQUEST, "지원서를 찾을 수 없습니다."),
 
-    //Role
-    CUSTOM_JOB_ROLE_REQUIRED(HttpStatus.BAD_REQUEST, "직군이 비어있을 수 없습니다."),
-    ROLE_DUPLICATE(HttpStatus.BAD_REQUEST, "중복된 직군입니다."),
-    INVALID_JOB_ROLE(HttpStatus.BAD_REQUEST, "직군 요청이 올바르지 않습니다."),
-    JOB_ROLE_NOT_FOUND(HttpStatus.BAD_REQUEST, "직군을 찾을 수 없습니다."),
-    JOB_CATEGORY_NOT_FOUND(HttpStatus.BAD_REQUEST, "직군 카테고리를 찾을 수 없습니다."),
-
-    // Reviews
-    CANNOT_REVIEW_SELF(HttpStatus.BAD_REQUEST, "자기 자신에게 리뷰를 작성할 수 없습니다."),
-    REVIEW_TARGET_INVALID(HttpStatus.BAD_REQUEST, "평가 대상이 유효하지 않습니다."),
-    ALREADY_REVIEWED(HttpStatus.BAD_REQUEST, "이미 평가를 작성했습니다."),
 
     //Applications
-    APPLICATION_ALREADY_PROCESSED(HttpStatus.BAD_REQUEST, "이미 처리된 지원입니다.");
+    APPLICATION_ALREADY_PROCESSED(HttpStatus.BAD_REQUEST, "이미 처리된 지원입니다."),;
 
     private final HttpStatus status;
     private final String message;
