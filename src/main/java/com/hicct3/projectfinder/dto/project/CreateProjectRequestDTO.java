@@ -51,6 +51,7 @@ public class CreateProjectRequestDTO {
 
     @NotNull
     @Valid
+    @Size(min = 1, max = 6, message = "모집 역할은 1개 이상 6개 이하로 등록할 수 있습니다.")
     private List<CreateRecruitmentRequestDTO> recruitments;
 
     @Valid

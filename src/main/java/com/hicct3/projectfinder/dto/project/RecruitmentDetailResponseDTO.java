@@ -11,6 +11,7 @@ import lombok.*;
 @Setter
 public class RecruitmentDetailResponseDTO {
     private Long id;
+    private Long jobRoleId;
     private String name;
     private JobCategoryCode category;
     private Integer applicantCount;
@@ -22,6 +23,7 @@ public class RecruitmentDetailResponseDTO {
     {
         return RecruitmentDetailResponseDTO.builder()
                 .id(projectRecruitment.getId())
+                .jobRoleId(projectRecruitment.getJobRole().getId())
                 .category(projectRecruitment.getJobRole().getJobCategory().getCategoryCode())
                 .name(projectRecruitment.getJobRole().getName())
                 .applicantCount(projectRecruitment.getApplicantCount())

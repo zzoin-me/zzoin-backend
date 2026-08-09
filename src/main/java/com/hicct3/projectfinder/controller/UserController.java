@@ -59,12 +59,15 @@ public class UserController {
     @GetMapping("/me/projects")
     public ApiResponse<Page<MyProjectPreviewResponseDTO>> getMyProjects(
             Authentication authentication,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "false") boolean hasApplicants,
             Pageable pageable
     )
     {
         CustomUserDetails userDetails =
                 (CustomUserDetails) authentication.getPrincipal();
-        return ApiResponse.onSuccess(projectService.getMyProjects(userDetails.getId(), pageable));
+        return ApiResponse.onSuccess(projectService.getMyProjects(
+                userDetails.getId(), status, hasApplicants, pageable));
     }
 
     @Operation(summary = "userId로 프로필 조회")

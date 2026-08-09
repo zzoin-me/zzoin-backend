@@ -9,12 +9,12 @@ import lombok.*;
 @Getter
 @Setter
 public class UpdateRecruitmentRequestDTO implements RecruitmentRequest {
-    @NotNull
     private Long recruitmentId;
 
+    @NotNull
     private Long jobRoleId;
 
-    @NotBlank
+    @NotNull
     @Min(0)
     @Max(100)
     private Integer recruitmentCount;

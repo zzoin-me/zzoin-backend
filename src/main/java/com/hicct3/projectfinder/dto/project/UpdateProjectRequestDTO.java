@@ -2,6 +2,7 @@ package com.hicct3.projectfinder.dto.project;
 
 import com.hicct3.projectfinder.entity.enums.CollaborationType;
 import com.hicct3.projectfinder.entity.enums.GoalType;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
@@ -38,6 +39,8 @@ public class UpdateProjectRequestDTO {
     @Size(min = 2, max=255, message = "이미지는 2자 이상 255자 이하여야 합니다.")
     private String imageUrl;
 
+    @Valid
+    @Size(min = 1, max = 6, message = "모집 역할은 1개 이상 6개 이하로 등록할 수 있습니다.")
     private List<UpdateRecruitmentRequestDTO> recruitments;
 
 

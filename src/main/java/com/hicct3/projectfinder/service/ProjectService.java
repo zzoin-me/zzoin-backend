@@ -266,12 +266,20 @@ public class ProjectService {
     }
 
     @Transactional
-    public Page<MyProjectPreviewResponseDTO> getMyProjects(Long userId, Pageable pageable)
+    public Page<MyProjectPreviewResponseDTO> getMyProjects(
+            Long userId,
+            String status,
+            boolean hasApplicants,
+            Pageable pageable)
     {
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorCode.USER_NOT_FOUND));
 
-        return projectRepository.findAllByAuthorAndDeletedAtIsNull(user, pageable)
+        String normalizedStatus = "RECRUITING".equals(status) || "CLOSED".equals(status)
+                ? status
+                : null;
+
+        return projectRepository.findMyProjects(user, normalizedStatus, hasApplicants, pageable)
                 .map(project -> MyProjectPreviewResponseDTO.from(
                         project,
                         projectRecruitmentRepository.findAllByProjectAndDeletedAtIsNull(project)
