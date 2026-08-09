@@ -6,10 +6,7 @@ import com.hicct3.projectfinder.dto.application.ProjectApplicantsResponseDTO;
 import com.hicct3.projectfinder.dto.application.UpdateApplicantStatusDTO;
 import com.hicct3.projectfinder.dto.project.*;
 import com.hicct3.projectfinder.entity.enums.GoalType;
-import com.hicct3.projectfinder.dto.project.review.CreateReviewRequestDTO;
-import com.hicct3.projectfinder.dto.project.review.MemberReviewsResponseDTO;
-import com.hicct3.projectfinder.dto.project.review.MembersResponseDTO;
-import com.hicct3.projectfinder.entity.enums.JobCategoryCode;
+import com.hicct3.projectfinder.entity.enums.RecruitmentCategory;
 import com.hicct3.projectfinder.entity.enums.SortType;
 import com.hicct3.projectfinder.global.ApiResponse;
 import com.hicct3.projectfinder.global.CustomUserDetails;
@@ -34,32 +31,6 @@ public class ProjectController {
     private final ProjectService projectService;
     private final ProjectQueryService projectQueryService;
     private final ProjectApplicationService projectApplicationService;
-
-    @Operation(summary = "팀원 목록 조회")
-    @GetMapping("/{projectId}/members")
-    public ApiResponse<MembersResponseDTO> getMembers(Authentication authentication, @PathVariable Long projectId) {
-        CustomUserDetails userDetails =
-                (CustomUserDetails) authentication.getPrincipal();
-        return ApiResponse.onSuccess("팀원 목록 조회에 성공했습니다.", projectService.getMembers(userDetails.getId(), projectId));
-    }
-
-    @Operation(summary = "팀원 평가 상세 조회")
-    @GetMapping("/{projectId}/reviews")
-    public ApiResponse<MemberReviewsResponseDTO> getMemberReviews(Authentication authentication, @PathVariable Long projectId) {
-        CustomUserDetails userDetails =
-                (CustomUserDetails) authentication.getPrincipal();
-        return ApiResponse.onSuccess("팀원 평가 상세 조회에 성공했습니다.", projectService.getMyReviews(userDetails.getId(), projectId));
-    }
-
-    @Operation(summary = "팀원 평가 등록")
-    @PostMapping("/{projectId}/reviews")
-    public ApiResponse<Void> createMemberReview(Authentication authentication, @PathVariable Long projectId, @RequestBody @Valid CreateReviewRequestDTO req)
-    {
-        CustomUserDetails userDetails =
-                (CustomUserDetails) authentication.getPrincipal();
-        projectService.createReview(userDetails.getId(), projectId, req);
-        return ApiResponse.onSuccess("팀원 평가 등록에 성공했습니다.", null);
-    }
 
     @Operation(summary = "지원자 상태 변경")
     @PatchMapping("applications/{applicationId}")
@@ -93,7 +64,7 @@ public class ProjectController {
 
     @Operation(summary = "카테고리별 프로젝트 수")
     @GetMapping("/category-counts")
-    public ApiResponse<Map<JobCategoryCode, Long>> getCategoryCounts()
+    public ApiResponse<Map<RecruitmentCategory, Long>> getCategoryCounts()
     {
         return ApiResponse.onSuccess(projectQueryService.countProjectsPerCategory());
     }
@@ -112,7 +83,7 @@ public class ProjectController {
     public ApiResponse<Page<ProjectPreviewResponseDTO>> getProjects(
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "LATEST") String sort,
-            @RequestParam(required = false) JobCategoryCode category,
+            @RequestParam(required = false) RecruitmentCategory category,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) Integer maxDays,
             @RequestParam(required = false) Integer minCount,

@@ -12,5 +12,4 @@ import java.util.List;
 
 public interface ProjectRepository extends JpaRepository<Project, Long>, ProjectRepositoryCustom  {
     Page<Project> findAllByAuthorAndDeletedAtIsNull(User author, Pageable pageable);
-    List<Project> findAllByAuthor(User author);
 }

@@ -2,7 +2,7 @@ package com.hicct3.projectfinder.dto.application;
 
 import com.hicct3.projectfinder.entity.*;
 import com.hicct3.projectfinder.entity.enums.ApplicationStatus;
-import com.hicct3.projectfinder.entity.enums.JobCategoryCode;
+import com.hicct3.projectfinder.entity.enums.RecruitmentCategory;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -19,7 +19,7 @@ public class ProjectApplicantResponseDTO {
     private String nickName;
     private String profileUrl;
     private String recruitmentName;
-    private JobCategoryCode recruitmentCategory;
+    private RecruitmentCategory recruitmentCategory;
     private List<String> stackNames;
     private LocalDateTime applicationDate;
     private String letter;
@@ -38,8 +38,8 @@ public class ProjectApplicantResponseDTO {
                 .userId(application.getUser().getUserId())
                 .nickName(application.getUser().getNickName())
                 .profileUrl(application.getUser().getProfileUrl())
-                .recruitmentName(application.getRecruitment().getJobRole().getName())
-                .recruitmentCategory(application.getRecruitment().getJobRole().getJobCategory().getCategoryCode())
+                .recruitmentName(application.getRecruitment().getName())
+                .recruitmentCategory(application.getRecruitment().getCategory())
                 .stackNames(application.getUser().getStacks().stream().map(Stack::getName).toList())
                 .applicationDate(application.getCreatedAt())
                 .letter(application.getLetter())

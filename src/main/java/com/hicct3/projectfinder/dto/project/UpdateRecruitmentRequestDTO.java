@@ -1,5 +1,6 @@
 package com.hicct3.projectfinder.dto.project;
 
+import com.hicct3.projectfinder.entity.enums.RecruitmentCategory;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
@@ -8,26 +9,22 @@ import lombok.*;
 @Builder
 @Getter
 @Setter
-public class UpdateRecruitmentRequestDTO implements RecruitmentRequest {
-    @NotNull
+public class UpdateRecruitmentRequestDTO {
+    //요청에 id없으면 새로 추가
     private Long recruitmentId;
 
-    private Long jobRoleId;
-
     @Size(min = 2, max = 30, message = "모집 이름은 2자 이상 30자 이하여야 합니다.")
-    private String customJobRoleName;
+    private String name;
 
-    @NotBlank
+    private RecruitmentCategory category;
+
     @Min(0)
     @Max(100)
-    private Integer recruitmentCount;
+    private Integer count;
 
-    @NotBlank
     @Size(min = 2, max = 200, message = "자격 요건은 2자 이상 200자 이하여야 합니다.")
     private String qualification;
 
-    @NotBlank
     @Size(min = 2, max = 200, message = "선호 요건은 2자 이상 200자 이하여야 합니다.")
     private String preferred;
-
 }
