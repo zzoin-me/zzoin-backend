@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
+import java.util.List;
+
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -18,5 +20,7 @@ public class ApplyProjectRequestDTO {
     @NotBlank
     @Size(min = 10, max = 500, message = "자기소개서는 10자 이상 500자 이하여야 합니다.")
     private String letter;
+
+    private List<AnswerRequestDTO> answers;
 
 }

@@ -11,5 +11,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface ProjectRepository extends JpaRepository<Project, Long>, ProjectRepositoryCustom  {
-    Page<Project> findAllByAuthorAndDeletedAtIsNull(User author, Pageable pageable);
+    Page<Project> findAllByAuthorAndDeletedAtIsNullOrderByIdDesc(User author, Pageable pageable);
+    Page<Project> findAllByAuthorAndDeletedAtIsNullAndStatusOrderByIdDesc(User author, ProjectStatus status, Pageable pageable);
+    Page<Project> findAllByAuthorAndDeletedAtIsNullAndStatusNotOrderByIdDesc(User author, ProjectStatus status, Pageable pageable);
 }

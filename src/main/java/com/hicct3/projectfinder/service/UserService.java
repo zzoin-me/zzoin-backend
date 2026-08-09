@@ -10,6 +10,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 
 @Service
@@ -24,7 +25,7 @@ public class UserService {
 
         return UserProfileResponseDTO.builder()
                 .name(user.getNickName())
-                .field(user.getField())
+                .fields(user.getFields())
                 .bio(user.getBio())
                 .profileUrl(user.getProfileUrl())
                 .verified(user.getVerified())
@@ -44,11 +45,16 @@ public class UserService {
         return MyProfileResponseDTO.builder()
                 .name(user.getNickName())
                 .email(user.getEmail())
-                .field(user.getField())
+                .fields(user.getFields())
                 .bio(user.getBio())
                 .profileUrl(user.getProfileUrl())
                 .verified(user.getVerified())
                 .verifiedEmail(user.getVerifiedEmail())
+                .nicknameChangeableAt(
+                    user.getNicknameChangedAt() == null
+                        ? null
+                        : user.getNicknameChangedAt().plusDays(90)
+                )
                 .stackInfoList(user.getStacks().stream().
                         map(x->StackInfoResponseDTO.builder()
                                 .id(x.getId())
@@ -79,10 +85,16 @@ public class UserService {
 
         if(req.getNickName() != null && !req.getNickName().equals(user.getNickName()))
         {
+            if (user.getNicknameChangedAt() != null
+                    && user.getNicknameChangedAt().plusDays(90).isAfter(LocalDateTime.now())) {
+                throw new GeneralException(ErrorCode.NICKNAME_CHANGE_COOLDOWN);
+            }
+
             if(userRepository.existsByNickName(req.getNickName()))
                 throw new GeneralException(ErrorCode.DUPLICATE_NICKNAME);
 
             user.setNickName(req.getNickName());
+            user.setNicknameChangedAt(LocalDateTime.now());
         }
 
         if(req.getBio() != null)
@@ -98,8 +110,8 @@ public class UserService {
             user.setStacks(stacks);
         }
 
-        if(req.getField() != null)
-            user.setField(req.getField());
+        if(req.getFields() != null)
+            user.setFields(req.getFields());
 
         if(req.getProfileUrl() != null)
             user.setProfileUrl(req.getProfileUrl());

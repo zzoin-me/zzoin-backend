@@ -70,8 +70,16 @@ public class Project {
     @Column(nullable = false)
     private ProjectStatus status;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer viewCount = 0;
+
     public Boolean isRecruitmentClosed()
     {
         return status != ProjectStatus.RECRUITING || recruitmentDeadline.isBefore(LocalDateTime.now());
+    }
+
+    public void increaseViewCount() {
+        this.viewCount++;
     }
 }

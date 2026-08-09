@@ -2,6 +2,7 @@ package com.hicct3.projectfinder.repository;
 
 import com.hicct3.projectfinder.entity.Project;
 import com.hicct3.projectfinder.entity.QProject;
+import com.hicct3.projectfinder.entity.QProjectApplication;
 import com.hicct3.projectfinder.entity.QProjectRecruitment;
 import com.hicct3.projectfinder.entity.enums.GoalType;
 import com.hicct3.projectfinder.entity.enums.ProjectStatus;
@@ -12,6 +13,7 @@ import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,8 @@ import java.time.LocalDateTime;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
@@ -35,12 +39,12 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
     public Page<Project> searchProjects(
             SortType sortType,
             String keyword,
-            RecruitmentCategory category,
-            String name,
+            List<RecruitmentCategory> categories,
+            List<String> names,
             Integer maxDays,
             Integer minCount,
             Integer maxCount,
-            GoalType goal,
+            List<GoalType> goals,
             Boolean recruitingOnly,
             Pageable pageable
     ) {
@@ -50,9 +54,9 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
 
         where = where.and(keywordContains(keyword));
         where = where.and(maxDaysContains(maxDays));
-        where = where.and(recruitmentContains(category, name));
-        where = where.and(countBetween(minCount, maxCount, category, name));
-        where = where.and(goalContains(goal));
+        where = where.and(recruitmentContains(categories, names));
+        where = where.and(countBetween(minCount, maxCount, categories, names));
+        where = where.and(goalContains(goals));
         where = where.and(recruitingOnlyContains(recruitingOnly));
 
         List<Project> content = queryFactory
@@ -99,6 +103,161 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
         return map;
     }
 
+    @Override
+    public Page<Project> findRecommendProjects(Long userId, List<String> userFields, Pageable pageable) {
+        QProject project = QProject.project;
+        QProjectRecruitment recruitment = QProjectRecruitment.projectRecruitment;
+
+        BooleanExpression where = project.deletedAt.isNull();
+
+        List<Long> appliedProjectIds = queryFactory
+                .select(recruitment.project.id)
+                .from(QProjectApplication.projectApplication)
+                .join(QProjectApplication.projectApplication.recruitment, recruitment)
+                .where(QProjectApplication.projectApplication.user.userId.eq(userId))
+                .distinct()
+                .fetch();
+
+        if (!appliedProjectIds.isEmpty()) {
+            where = where.and(project.id.notIn(appliedProjectIds));
+        }
+
+        List<Project> allCandidates = queryFactory
+                .selectFrom(project)
+                .where(where)
+                .fetch();
+
+        List<Long> projectIds = allCandidates.stream().map(Project::getId).toList();
+
+        Map<Long, List<String>> recruitmentNamesByProject = queryFactory
+                .select(recruitment.project.id, recruitment.name)
+                .from(recruitment)
+                .where(recruitment.project.id.in(projectIds)
+                        .and(recruitment.deletedAt.isNull()))
+                .fetch()
+                .stream()
+                .collect(Collectors.groupingBy(
+                        t -> t.get(recruitment.project.id),
+                        Collectors.mapping(t -> t.get(recruitment.name), Collectors.toList())
+                ));
+
+        Map<Long, Long> applicantCounts = queryFactory
+                .select(recruitment.project.id, QProjectApplication.projectApplication.count())
+                .from(QProjectApplication.projectApplication)
+                .join(QProjectApplication.projectApplication.recruitment, recruitment)
+                .where(recruitment.project.id.in(projectIds))
+                .groupBy(recruitment.project.id)
+                .fetch()
+                .stream()
+                .collect(Collectors.toMap(
+                        t -> t.get(recruitment.project.id),
+                        t -> t.get(QProjectApplication.projectApplication.count())
+                ));
+
+        List<Project> sorted = allCandidates.stream().sorted((a, b) -> {
+            double scoreA = calculateRecommendScore(a, userFields,
+                    recruitmentNamesByProject.getOrDefault(a.getId(), List.of()),
+                    applicantCounts.getOrDefault(a.getId(), 0L));
+            double scoreB = calculateRecommendScore(b, userFields,
+                    recruitmentNamesByProject.getOrDefault(b.getId(), List.of()),
+                    applicantCounts.getOrDefault(b.getId(), 0L));
+            return Double.compare(scoreB, scoreA);
+        }).toList();
+
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), sorted.size());
+        List<Project> content = start < sorted.size()
+                ? sorted.subList(start, end)
+                : List.of();
+
+        return new PageImpl<>(content, pageable, sorted.size());
+    }
+
+    private double calculateRecommendScore(Project p, List<String> userFields,
+                                           List<String> recruitmentNames, long applicantCount) {
+        int fieldMatch = 0;
+        if (userFields != null && !userFields.isEmpty()) {
+            Set<String> userFieldSet = new java.util.HashSet<>(userFields);
+            for (String name : recruitmentNames) {
+                if (userFieldSet.contains(name)) fieldMatch++;
+            }
+        }
+
+        double base = fieldMatch * 40.0
+                + p.getAuthor().getRatingAvg() * 20.0
+                + applicantCount * 10.0
+                + p.getViewCount() * 1.0;
+
+        long daysToDeadline = java.time.Duration.between(
+                java.time.LocalDateTime.now(), p.getRecruitmentDeadline()).toDays();
+        if (daysToDeadline <= 3) base *= 1.5;
+        else if (daysToDeadline <= 7) base *= 1.2;
+
+        long daysSinceCreated = java.time.Duration.between(
+                p.getCreatedAt(), java.time.LocalDateTime.now()).toDays();
+        base *= Math.pow(0.95, daysSinceCreated);
+
+        return base;
+    }
+
+    @Override
+    public Page<Project> findPopularProjects(Pageable pageable) {
+        QProject project = QProject.project;
+        QProjectRecruitment recruitment = QProjectRecruitment.projectRecruitment;
+
+        BooleanExpression where = project.deletedAt.isNull();
+
+        List<Project> allCandidates = queryFactory
+                .selectFrom(project)
+                .where(where)
+                .fetch();
+
+        List<Long> projectIds = allCandidates.stream().map(Project::getId).toList();
+
+        Map<Long, Long> applicantCounts = projectIds.isEmpty() ? Map.of() : queryFactory                .select(recruitment.project.id, QProjectApplication.projectApplication.count())
+                .from(QProjectApplication.projectApplication)
+                .join(QProjectApplication.projectApplication.recruitment, recruitment)
+                .where(recruitment.project.id.in(projectIds))
+                .groupBy(recruitment.project.id)
+                .fetch()
+                .stream()
+                .collect(Collectors.toMap(
+                        t -> t.get(recruitment.project.id),
+                        t -> t.get(QProjectApplication.projectApplication.count())
+                ));
+
+        List<Project> sorted = allCandidates.stream().sorted((a, b) -> {
+            double scoreA = calculatePopularScore(a, applicantCounts.getOrDefault(a.getId(), 0L));
+            double scoreB = calculatePopularScore(b, applicantCounts.getOrDefault(b.getId(), 0L));
+            return Double.compare(scoreB, scoreA);
+        }).toList();
+
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), sorted.size());
+        List<Project> content = start < sorted.size()
+                ? sorted.subList(start, end)
+                : List.of();
+
+        return new PageImpl<>(content, pageable, sorted.size());
+    }
+
+    private double calculatePopularScore(Project p, long applicantCount) {
+        double base = applicantCount * 10.0
+                + p.getAuthor().getRatingAvg() * 20.0
+                + p.getViewCount() * 1.0;
+
+        long daysToDeadline = java.time.Duration.between(
+                java.time.LocalDateTime.now(), p.getRecruitmentDeadline()).toDays();
+        if (daysToDeadline <= 3) base *= 1.5;
+        else if (daysToDeadline <= 7) base *= 1.2;
+
+        long daysSinceCreated = java.time.Duration.between(
+                p.getCreatedAt(), java.time.LocalDateTime.now()).toDays();
+        base *= Math.pow(0.95, daysSinceCreated);
+
+        return base;
+    }
+
     private BooleanExpression keywordContains(String keyword) {
         if (keyword == null || keyword.isBlank()) {
             return null;
@@ -118,19 +277,21 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
         );
     }
 
-    private BooleanExpression recruitmentContains(RecruitmentCategory category, String name) {
-        if (category == null && (name == null || name.isBlank())) {
+    private BooleanExpression recruitmentContains(List<RecruitmentCategory> categories, List<String> names) {
+        boolean hasCategory = categories != null && !categories.isEmpty();
+        boolean hasName = names != null && !names.isEmpty();
+        if (!hasCategory && !hasName) {
             return null;
         }
         QProject project = QProject.project;
         QProjectRecruitment recruitment = QProjectRecruitment.projectRecruitment;
 
         BooleanExpression cond = recruitment.deletedAt.isNull();
-        if (category != null) {
-            cond = cond.and(recruitment.category.eq(category));
+        if (hasCategory) {
+            cond = cond.and(recruitment.category.in(categories));
         }
-        if (name != null && !name.isBlank()) {
-            cond = cond.and(recruitment.name.eq(name));
+        if (hasName) {
+            cond = cond.and(recruitment.name.in(names));
         }
 
         return project.id.in(
@@ -141,7 +302,7 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
         );
     }
 
-    private BooleanExpression countBetween(Integer minCount, Integer maxCount, RecruitmentCategory category, String name) {
+    private BooleanExpression countBetween(Integer minCount, Integer maxCount, List<RecruitmentCategory> categories, List<String> names) {
         if (minCount == null && maxCount == null) {
             return null;
         }
@@ -152,11 +313,11 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
         BooleanExpression conditions = recruitment.project.id.eq(project.id)
                 .and(recruitment.deletedAt.isNull());
 
-        if (category != null) {
-            conditions = conditions.and(recruitment.category.eq(category));
+        if (categories != null && !categories.isEmpty()) {
+            conditions = conditions.and(recruitment.category.in(categories));
         }
-        if (name != null && !name.isBlank()) {
-            conditions = conditions.and(recruitment.name.eq(name));
+        if (names != null && !names.isEmpty()) {
+            conditions = conditions.and(recruitment.name.in(names));
         }
 
         var sumExpression = Expressions.asNumber(
@@ -175,11 +336,11 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
         }
     }
 
-    private BooleanExpression goalContains(GoalType goal) {
-        if (goal == null) {
+    private BooleanExpression goalContains(List<GoalType> goals) {
+        if (goals == null || goals.isEmpty()) {
             return null;
         }
-        return QProject.project.goal.eq(goal);
+        return QProject.project.goal.in(goals);
     }
 
     private BooleanExpression recruitingOnlyContains(Boolean recruitingOnly) {
@@ -204,6 +365,9 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
     private OrderSpecifier<?> sortOrder(QProject project, SortType sortType) {
         if (sortType == SortType.DEADLINE) {
             return project.recruitmentDeadline.asc();
+        }
+        if (sortType == SortType.POPULAR) {
+            return project.viewCount.desc();
         }
         return project.createdAt.desc();
     }

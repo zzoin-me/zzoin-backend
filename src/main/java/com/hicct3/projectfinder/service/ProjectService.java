@@ -6,6 +6,7 @@ import com.hicct3.projectfinder.dto.project.UpdateProjectStatusRequestDTO;
 import com.hicct3.projectfinder.dto.project.myproject.MyApplicationPreviewResponseDTO;
 import com.hicct3.projectfinder.dto.project.myproject.MyProjectPreviewResponseDTO;
 import com.hicct3.projectfinder.entity.Project;
+import com.hicct3.projectfinder.entity.ProjectQuestion;
 import com.hicct3.projectfinder.entity.ProjectRecruitment;
 import com.hicct3.projectfinder.entity.enums.ApplicationStatus;
 import com.hicct3.projectfinder.entity.enums.ProjectStatus;
@@ -14,12 +15,14 @@ import com.hicct3.projectfinder.entity.enums.RecruitmentRole;
 import com.hicct3.projectfinder.global.ErrorCode;
 import com.hicct3.projectfinder.global.GeneralException;
 import com.hicct3.projectfinder.repository.ProjectApplicationRepository;
+import com.hicct3.projectfinder.repository.ProjectQuestionRepository;
 import com.hicct3.projectfinder.repository.ProjectRecruitmentRepository;
 import com.hicct3.projectfinder.repository.ProjectRepository;
 import com.hicct3.projectfinder.repository.UserRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -27,6 +30,7 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -34,22 +38,35 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final ProjectRecruitmentRepository projectRecruitmentRepository;
     private final ProjectApplicationRepository projectApplicationRepository;
+    private final ProjectQuestionRepository projectQuestionRepository;
     private final UserRepository userRepository;
 
-    @Transactional
-    public Page<MyProjectPreviewResponseDTO> getMyProjects(Long userId, Pageable pageable)
+    @Transactional(readOnly = true)
+    public Page<MyProjectPreviewResponseDTO> getMyProjects(Long userId, String statusFilter, Pageable pageable)
     {
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorCode.USER_NOT_FOUND));
 
-        return projectRepository.findAllByAuthorAndDeletedAtIsNull(user, pageable)
+        Page<Project> projects;
+        if ("RECRUITING".equals(statusFilter)) {
+            projects = projectRepository.findAllByAuthorAndDeletedAtIsNullAndStatusOrderByIdDesc(user, ProjectStatus.RECRUITING, pageable);
+        } else if ("CLOSED".equals(statusFilter)) {
+            projects = projectRepository.findAllByAuthorAndDeletedAtIsNullAndStatusNotOrderByIdDesc(user, ProjectStatus.RECRUITING, pageable);
+        } else {
+            projects = projectRepository.findAllByAuthorAndDeletedAtIsNullOrderByIdDesc(user, pageable);
+        }
+
+        List<MyProjectPreviewResponseDTO> dtos = projects.getContent().stream()
                 .map(project -> MyProjectPreviewResponseDTO.from(
                         project,
                         projectRecruitmentRepository.findAllByProjectAndDeletedAtIsNull(project)
-                ));
+                ))
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(dtos, pageable, projects.getTotalElements());
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public Page<MyApplicationPreviewResponseDTO> getMyApplications(Long userId, ApplicationStatus status, Pageable pageable)
     {
         var user = userRepository.findById(userId)
@@ -59,7 +76,11 @@ public class ProjectService {
                 ? projectApplicationRepository.findAllByUserAndStatus(user, status, pageable)
                 : projectApplicationRepository.findAllByUser(user, pageable);
 
-        return applications.map(MyApplicationPreviewResponseDTO::from);
+        List<MyApplicationPreviewResponseDTO> dtos = applications.getContent().stream()
+                .map(MyApplicationPreviewResponseDTO::from)
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(dtos, pageable, applications.getTotalElements());
     }
 
     @Transactional
@@ -103,6 +124,27 @@ public class ProjectService {
                     .build());
         });
 
+        saveQuestions(savedProject, req.getQuestions());
+
+    }
+
+    private void saveQuestions(Project project, java.util.List<com.hicct3.projectfinder.dto.project.CreateQuestionRequestDTO> questions) {
+        if (questions == null || questions.isEmpty()) return;
+        if (questions.size() > 10) {
+            throw new GeneralException(ErrorCode.QUESTION_LIMIT_EXCEEDED);
+        }
+        for (int i = 0; i < questions.size(); i++) {
+            var q = questions.get(i);
+            projectQuestionRepository.save(ProjectQuestion.builder()
+                    .project(project)
+                    .orderIndex(i)
+                    .type(q.getType())
+                    .label(q.getLabel())
+                    .options(q.getOptions() != null && !q.getOptions().isEmpty() ? String.join(",", q.getOptions()) : null)
+                    .required(q.getRequired())
+                    .createdAt(LocalDateTime.now())
+                    .build());
+        }
     }
 
     @Transactional
@@ -193,6 +235,12 @@ public class ProjectService {
                     .filter(recruitment -> !requestedRecruitmentIds.contains(recruitment.getId()))
                     .forEach(recruitment -> recruitment.setDeletedAt(LocalDateTime.now()));
         }
+
+        if(req.getQuestions() != null) {
+            projectQuestionRepository.findAllByProjectInAndDeletedAtIsNull(List.of(project))
+                    .forEach(q -> q.setDeletedAt(LocalDateTime.now()));
+            saveQuestions(project, req.getQuestions());
+        }
     }
 
     @Transactional
@@ -228,7 +276,7 @@ public class ProjectService {
     }
 
     private void validateRecruitmentRole(RecruitmentCategory category, String name) {
-        if (category == null || category == RecruitmentCategory.ETC) {
+        if (category == null) {
             return;
         }
         if (name == null || name.isBlank()) {

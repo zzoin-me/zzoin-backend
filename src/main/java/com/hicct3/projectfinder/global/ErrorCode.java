@@ -20,6 +20,8 @@ public enum ErrorCode {
     SIGNUP_EMAIL_MISMATCH(HttpStatus.BAD_REQUEST, "회원가입 인증 이메일과 요청 이메일이 일치하지 않습니다."),
     INVALID_USER(HttpStatus.BAD_REQUEST, "유효하지 않은 사용자입니다."),
     USER_WITHDRAWN(HttpStatus.BAD_REQUEST, "탈퇴한 사용자입니다."),
+    SOCIAL_ACCOUNT_CONFLICT(HttpStatus.BAD_REQUEST, "이미 다른 소셜 계정으로 가입된 이메일입니다."),
+    SOCIAL_EMAIL_NOT_VERIFIED(HttpStatus.BAD_REQUEST, "소셜 이메일이 검증되지 않았습니다."),
 
     // User
     USER_NOT_FOUND(HttpStatus.BAD_REQUEST, "사용자가 존재하지 않습니다."),
@@ -28,6 +30,7 @@ public enum ErrorCode {
     DUPLICATE_VERIFIED_EMAIL(HttpStatus.BAD_REQUEST, "인증에 이용된 이메일입니다."),
     EMAIL_USED_BY_OTHER_ACCOUNT(HttpStatus.BAD_REQUEST, "이미 다른 계정에서 사용 중인 이메일입니다."),
     USER_NOT_VERIFIED(HttpStatus.BAD_REQUEST, "인증되지 않은 사용자입니다."),
+    NICKNAME_CHANGE_COOLDOWN(HttpStatus.BAD_REQUEST, "닉네임은 90일마다 변경할 수 있습니다."),
 
     // Email
     EMAIL_SEND_FAILED(HttpStatus.BAD_REQUEST, "이메일 전송에 실패했습니다."),
@@ -62,7 +65,20 @@ public enum ErrorCode {
 
 
     //Applications
-    APPLICATION_ALREADY_PROCESSED(HttpStatus.BAD_REQUEST, "이미 처리된 지원입니다."),;
+    APPLICATION_ALREADY_PROCESSED(HttpStatus.BAD_REQUEST, "이미 처리된 지원입니다."),
+
+    // Community
+    POST_NOT_FOUND(HttpStatus.BAD_REQUEST, "게시글을 찾을 수 없습니다."),
+    POST_DELETED(HttpStatus.BAD_REQUEST, "삭제된 게시글입니다."),
+    NOT_POST_AUTHOR(HttpStatus.BAD_REQUEST, "게시글 작성자가 일치하지 않습니다."),
+    COMMENT_NOT_FOUND(HttpStatus.BAD_REQUEST, "댓글을 찾을 수 없습니다."),
+    NOT_COMMENT_AUTHOR(HttpStatus.BAD_REQUEST, "댓글 작성자가 일치하지 않습니다."),
+    COMMENT_DEPTH_EXCEEDED(HttpStatus.BAD_REQUEST, "대댓글은 한 단계까지만 작성할 수 있습니다."),
+
+    // Question
+    QUESTION_NOT_FOUND(HttpStatus.BAD_REQUEST, "질문을 찾을 수 없습니다."),
+    REQUIRED_QUESTION_NOT_ANSWERED(HttpStatus.BAD_REQUEST, "필수 질문에 답변해주세요."),
+    QUESTION_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "질문은 최대 10개까지 추가할 수 있습니다."),;
 
     private final HttpStatus status;
     private final String message;

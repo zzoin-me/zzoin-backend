@@ -7,21 +7,26 @@ import com.hicct3.projectfinder.entity.enums.SortType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.Map;
 
 public interface ProjectRepositoryCustom {
     Page<Project> searchProjects(
             SortType sortType,
             String keyword,
-            RecruitmentCategory category,
-            String name,
+            List<RecruitmentCategory> categories,
+            List<String> names,
             Integer maxDays,
             Integer minCount,
             Integer maxCount,
-            GoalType goal,
+            List<GoalType> goals,
             Boolean recruitingOnly,
             Pageable pageable
     );
 
     Map<RecruitmentCategory, Long> countProjectsPerCategory();
+
+    Page<Project> findRecommendProjects(Long userId, List<String> userFields, Pageable pageable);
+
+    Page<Project> findPopularProjects(Pageable pageable);
 }
