@@ -38,3 +38,7 @@ out/
 
 ### Firebase ###
 src/main/resources/firebase-service-account.json
+
+### sh, sql ###
+*.sh
+*.sql
