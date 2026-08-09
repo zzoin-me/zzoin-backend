@@ -60,6 +60,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(request -> {
                     var config = new org.springframework.web.cors.CorsConfiguration();
                     config.setAllowedOriginPatterns(java.util.List.of(
+                            "*",
                             "capacitor://localhost",
                             "http://localhost",
                             "http://localhost:5173",
@@ -125,6 +126,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/project-feeds/popular").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/project-feeds/recommend").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/projects", "/api/projects/{projectId}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/job-roles/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/stacks").hasRole("ADMIN")
                         .requestMatchers("/api/projects/**").hasRole("VERIFIED")
                         .requestMatchers(HttpMethod.GET, "/api/posts", "/api/posts/{postId}").permitAll()
@@ -133,8 +135,6 @@ public class SecurityConfig {
                         .requestMatchers("/api/comments/**").hasRole("VERIFIED")
                         .requestMatchers(HttpMethod.GET, "/api/notifications/stream").permitAll()
                         .requestMatchers("/api/notifications/**").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/projects/*/chatroom/stream").permitAll()
-                        .requestMatchers("/api/projects/*/chatroom/**").authenticated()
                         .anyRequest().authenticated()
                 )
 

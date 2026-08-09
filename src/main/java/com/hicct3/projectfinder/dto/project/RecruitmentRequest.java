@@ -6,7 +6,6 @@ import jakarta.validation.constraints.Size;
 
 public interface RecruitmentRequest {
     Long getJobRoleId();
-    String getCustomJobRoleName();
     Integer getRecruitmentCount();
     String getQualification();
     String getPreferred();

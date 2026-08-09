@@ -55,7 +55,6 @@ public class ProjectApplicationService {
             projectMemberRepository.save(member);
         }
 
-       application.getRecruitment().setApplicantCount(application.getRecruitment().getApplicantCount() - 1);
        application.setStatus(dto.getStatus());
     }
 

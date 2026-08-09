@@ -27,13 +27,13 @@ public class JobCategoryInitializer implements CommandLineRunner {
         var design = jobCategoryRepository.save(createCategory(JobCategoryCode.DESIGN));
         var development = jobCategoryRepository.save(createCategory(JobCategoryCode.DEVELOPMENT));
         var marketing = jobCategoryRepository.save(createCategory(JobCategoryCode.MARKETING));
-        var other = jobCategoryRepository.save(createCategory(JobCategoryCode.ETC));
 
         // 기획
         jobRoleRepository.save(createJobRole("서비스 기획", planning));
         jobRoleRepository.save(createJobRole("PM", planning));
         jobRoleRepository.save(createJobRole("프로젝트 매니저", planning));
         jobRoleRepository.save(createJobRole("사업 기획", planning));
+        jobRoleRepository.save(createJobRole("기획 기타", planning));
 
         // 디자인
         jobRoleRepository.save(createJobRole("UX", design));
@@ -42,6 +42,7 @@ public class JobCategoryInitializer implements CommandLineRunner {
         jobRoleRepository.save(createJobRole("그래픽", design));
         jobRoleRepository.save(createJobRole("브랜드", design));
         jobRoleRepository.save(createJobRole("일러스트", design));
+        jobRoleRepository.save(createJobRole("디자인 기타", design));
 
         // 개발
         jobRoleRepository.save(createJobRole("프론트엔드", development));
@@ -55,6 +56,7 @@ public class JobCategoryInitializer implements CommandLineRunner {
         jobRoleRepository.save(createJobRole("DevOps", development));
         jobRoleRepository.save(createJobRole("데이터 엔지니어링", development));
         jobRoleRepository.save(createJobRole("보안", development));
+        jobRoleRepository.save(createJobRole("개발 기타", development));
 
         // 마케팅
         jobRoleRepository.save(createJobRole("콘텐츠", marketing));
@@ -63,6 +65,7 @@ public class JobCategoryInitializer implements CommandLineRunner {
         jobRoleRepository.save(createJobRole("브랜드", marketing));
         jobRoleRepository.save(createJobRole("광고", marketing));
         jobRoleRepository.save(createJobRole("PR", marketing));
+        jobRoleRepository.save(createJobRole("마케팅 기타", marketing));
     }
 
     private JobCategory createCategory(JobCategoryCode code) {

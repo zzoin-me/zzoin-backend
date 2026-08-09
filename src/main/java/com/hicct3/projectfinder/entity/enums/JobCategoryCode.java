@@ -6,11 +6,10 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum JobCategoryCode {
-    PLANNING("관리자"),
-    DESIGN("회원"),
+    PLANNING("기획"),
+    DESIGN("디자인"),
     DEVELOPMENT("개발"),
-    MARKETING("마케팅"),
-    ETC("기타");
+    MARKETING("마케팅");
 
     private final String name;
 

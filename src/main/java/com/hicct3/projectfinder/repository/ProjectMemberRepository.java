@@ -22,6 +22,8 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Lo
 
     long countByProject(Project project);
 
+    long countByProjectAndUserNot(Project project, User user);
+
     Page<ProjectMember> findByUserAndProject_Status(
             User user,
             ProjectStatus status,

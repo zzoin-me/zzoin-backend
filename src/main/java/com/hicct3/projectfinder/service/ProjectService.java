@@ -157,10 +157,10 @@ public class ProjectService {
             long reviewedCount =
                     memberReviewRepository.countByAuthorAndProject(user, project);
 
-            long totalReviewCount =
-                    memberReviewRepository.countByProject(project);
+            long otherMemberCount =
+                    projectMemberRepository.countByProjectAndUserNot(project, user);
 
-            boolean reviewCompleted = reviewedCount >= totalReviewCount;
+            boolean reviewCompleted = reviewedCount >= otherMemberCount;
 
             return MyReviewableProjectResponseDTO.builder()
                     .projectId(project.getId())
