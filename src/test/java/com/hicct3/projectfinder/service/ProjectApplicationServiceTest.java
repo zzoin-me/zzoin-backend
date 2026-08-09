@@ -9,7 +9,10 @@ import com.hicct3.projectfinder.entity.ProjectApplication;
 import com.hicct3.projectfinder.entity.ProjectQuestion;
 import com.hicct3.projectfinder.entity.ProjectRecruitment;
 import com.hicct3.projectfinder.entity.User;
+import com.hicct3.projectfinder.entity.enums.ApplicationStatus;
+import com.hicct3.projectfinder.entity.enums.NotificationType;
 import com.hicct3.projectfinder.entity.enums.QuestionType;
+import com.hicct3.projectfinder.event.ApplicationNotificationEvent;
 import com.hicct3.projectfinder.global.ErrorCode;
 import com.hicct3.projectfinder.global.GeneralException;
 import com.hicct3.projectfinder.repository.ApplicationAnswerRepository;
@@ -27,6 +30,7 @@ import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,6 +61,8 @@ class ProjectApplicationServiceTest {
     private ProjectQuestionRepository projectQuestionRepository;
     @Mock
     private ApplicationAnswerRepository applicationAnswerRepository;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private ProjectApplicationService projectApplicationService;
@@ -75,6 +81,9 @@ class ProjectApplicationServiceTest {
     @Test
     void savesValidatedAnswersWhenApplying() {
         stubApplyContext();
+        when(project.getId()).thenReturn(30L);
+        when(project.getTitle()).thenReturn("테스트 프로젝트");
+        when(applicant.getNickName()).thenReturn("지원자");
         ProjectQuestion textQuestion = question(1L, QuestionType.TEXT, true, null, 0);
         ProjectQuestion singleQuestion = question(
                 2L,
@@ -117,6 +126,58 @@ class ProjectApplicationServiceTest {
         assertEquals("온라인", savedAnswers.get(1).getAnswerText());
         assertEquals("GitHub,Slack", savedAnswers.get(2).getAnswerText());
         verify(recruitment).setApplicantCount(1);
+
+        ArgumentCaptor<ApplicationNotificationEvent> eventCaptor =
+                ArgumentCaptor.forClass(ApplicationNotificationEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        assertEquals(1L, eventCaptor.getValue().recipientId());
+        assertEquals(NotificationType.APPLICATION_RECEIVED, eventCaptor.getValue().type());
+        assertEquals("/projects/30/manage#applicants", eventCaptor.getValue().targetUrl());
+    }
+
+    @Test
+    void publishesApprovalNotificationForApplicant() {
+        ProjectApplication application = stubStatusUpdateContext();
+
+        projectApplicationService.updateApplicantStatus(
+                1L,
+                20L,
+                com.hicct3.projectfinder.dto.application.UpdateApplicantStatusDTO.builder()
+                        .status(ApplicationStatus.APPROVED)
+                        .build()
+        );
+
+        verify(application).setStatus(ApplicationStatus.APPROVED);
+        verify(projectMemberRepository).save(any());
+
+        ArgumentCaptor<ApplicationNotificationEvent> eventCaptor =
+                ArgumentCaptor.forClass(ApplicationNotificationEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        assertEquals(2L, eventCaptor.getValue().recipientId());
+        assertEquals(NotificationType.APPLICATION_APPROVED, eventCaptor.getValue().type());
+        assertEquals("/mypage/applications", eventCaptor.getValue().targetUrl());
+    }
+
+    @Test
+    void publishesRejectionNotificationForApplicant() {
+        ProjectApplication application = stubStatusUpdateContext();
+
+        projectApplicationService.updateApplicantStatus(
+                1L,
+                20L,
+                com.hicct3.projectfinder.dto.application.UpdateApplicantStatusDTO.builder()
+                        .status(ApplicationStatus.REJECTED)
+                        .build()
+        );
+
+        verify(application).setStatus(ApplicationStatus.REJECTED);
+        verify(projectMemberRepository, never()).save(any());
+
+        ArgumentCaptor<ApplicationNotificationEvent> eventCaptor =
+                ArgumentCaptor.forClass(ApplicationNotificationEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        assertEquals(2L, eventCaptor.getValue().recipientId());
+        assertEquals(NotificationType.APPLICATION_REJECTED, eventCaptor.getValue().type());
     }
 
     @Test
@@ -195,6 +256,24 @@ class ProjectApplicationServiceTest {
         when(applicant.getUserId()).thenReturn(2L);
         when(projectApplicationRepository.existsByUserAndRecruitment(applicant, recruitment))
                 .thenReturn(false);
+    }
+
+    private ProjectApplication stubStatusUpdateContext() {
+        ProjectApplication application = org.mockito.Mockito.mock(ProjectApplication.class);
+        User author = org.mockito.Mockito.mock(User.class);
+
+        when(projectApplicationRepository.findById(20L)).thenReturn(Optional.of(application));
+        when(application.getId()).thenReturn(20L);
+        when(application.getRecruitment()).thenReturn(recruitment);
+        when(application.getStatus()).thenReturn(ApplicationStatus.PENDING);
+        when(application.getUser()).thenReturn(applicant);
+        when(recruitment.getProject()).thenReturn(project);
+        when(project.getAuthor()).thenReturn(author);
+        when(project.getTitle()).thenReturn("테스트 프로젝트");
+        when(author.getUserId()).thenReturn(1L);
+        when(applicant.getUserId()).thenReturn(2L);
+
+        return application;
     }
 
     private ProjectQuestion question(

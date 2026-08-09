@@ -14,13 +14,18 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
@@ -34,7 +39,7 @@ public class NotificationService {
     private final FcmPushService fcmPushService;
     private final JwtProvider jwtProvider;
 
-    private final Map<Long, SseEmitter> emitters = new ConcurrentHashMap<>();
+    private final Map<Long, Set<SseEmitter>> emitters = new ConcurrentHashMap<>();
 
     @Transactional
     public void createNotification(Long userId, NotificationType type, String title,
@@ -55,8 +60,21 @@ public class NotificationService {
 
         notificationRepository.save(notification);
 
-        sendSse(userId, notification);
-        fcmPushService.sendToUser(userId, title, content, targetUrl);
+        Runnable delivery = () -> {
+            sendSse(userId, notification);
+            fcmPushService.sendToUser(userId, title, content, targetUrl);
+        };
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    delivery.run();
+                }
+            });
+        } else {
+            delivery.run();
+        }
     }
 
     @Transactional(readOnly = true)
@@ -93,39 +111,63 @@ public class NotificationService {
     public SseEmitter subscribe(Long userId) {
         SseEmitter emitter = new SseEmitter(60L * 60L * 1000L);
 
-        emitters.put(userId, emitter);
+        emitters.computeIfAbsent(userId, key -> ConcurrentHashMap.newKeySet()).add(emitter);
 
-        emitter.onCompletion(() -> emitters.remove(userId));
-        emitter.onTimeout(() -> emitters.remove(userId));
-        emitter.onError(e -> emitters.remove(userId));
+        emitter.onCompletion(() -> removeEmitter(userId, emitter));
+        emitter.onTimeout(() -> removeEmitter(userId, emitter));
+        emitter.onError(e -> removeEmitter(userId, emitter));
 
         try {
             emitter.send(SseEmitter.event().name("connect").data("connected"));
         } catch (Exception e) {
-            emitters.remove(userId);
+            removeEmitter(userId, emitter);
         }
 
         return emitter;
     }
 
     private void sendSse(Long userId, Notification notification) {
-        SseEmitter emitter = emitters.get(userId);
-        if (emitter != null) {
+        Set<SseEmitter> userEmitters = emitters.get(userId);
+        if (userEmitters == null) return;
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", notification.getId());
+        data.put("type", notification.getType());
+        data.put("title", notification.getTitle());
+        data.put("content", notification.getContent() != null ? notification.getContent() : "");
+        data.put("targetUrl", notification.getTargetUrl() != null ? notification.getTargetUrl() : "");
+        data.put("createdAt", notification.getCreatedAt().toString());
+
+        for (SseEmitter emitter : userEmitters) {
             try {
                 emitter.send(SseEmitter.event()
+                        .id(notification.getId().toString())
                         .name("notification")
-                        .data(Map.of(
-                                "id", notification.getId(),
-                                "type", notification.getType(),
-                                "title", notification.getTitle(),
-                                "content", notification.getContent(),
-                                "targetUrl", notification.getTargetUrl() != null ? notification.getTargetUrl() : "",
-                                "createdAt", notification.getCreatedAt().toString()
-                        )));
+                        .data(data));
             } catch (Exception e) {
-                emitters.remove(userId);
+                removeEmitter(userId, emitter);
             }
         }
+    }
+
+    @Scheduled(fixedRate = 25_000)
+    public void sendHeartbeat() {
+        emitters.forEach((userId, userEmitters) -> {
+            for (SseEmitter emitter : userEmitters) {
+                try {
+                    emitter.send(SseEmitter.event().comment("keep-alive"));
+                } catch (Exception e) {
+                    removeEmitter(userId, emitter);
+                }
+            }
+        });
+    }
+
+    private void removeEmitter(Long userId, SseEmitter emitter) {
+        emitters.computeIfPresent(userId, (key, userEmitters) -> {
+            userEmitters.remove(emitter);
+            return userEmitters.isEmpty() ? null : userEmitters;
+        });
     }
 
     @Transactional

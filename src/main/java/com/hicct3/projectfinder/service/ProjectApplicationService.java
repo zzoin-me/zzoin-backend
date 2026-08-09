@@ -7,14 +7,17 @@ import com.hicct3.projectfinder.dto.project.UpdateProjectStatusRequestDTO;
 import com.hicct3.projectfinder.entity.*;
 import com.hicct3.projectfinder.entity.enums.ApplicationStatus;
 import com.hicct3.projectfinder.entity.enums.MemberStatus;
+import com.hicct3.projectfinder.entity.enums.NotificationType;
 import com.hicct3.projectfinder.entity.enums.ProjectStatus;
 import com.hicct3.projectfinder.entity.enums.QuestionType;
 import com.hicct3.projectfinder.entity.enums.Role;
+import com.hicct3.projectfinder.event.ApplicationNotificationEvent;
 import com.hicct3.projectfinder.global.ErrorCode;
 import com.hicct3.projectfinder.global.GeneralException;
 import com.hicct3.projectfinder.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -32,6 +35,7 @@ public class ProjectApplicationService {
     private final UserRepository userRepository;
     private final ProjectQuestionRepository projectQuestionRepository;
     private final ApplicationAnswerRepository applicationAnswerRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public void updateApplicantStatus(Long userId, Long applicationId, UpdateApplicantStatusDTO dto)
@@ -58,6 +62,12 @@ public class ProjectApplicationService {
         }
 
        application.setStatus(dto.getStatus());
+
+       if (dto.getStatus() == ApplicationStatus.APPROVED) {
+           publishApplicationResultNotification(application, NotificationType.APPLICATION_APPROVED);
+       } else if (dto.getStatus() == ApplicationStatus.REJECTED) {
+           publishApplicationResultNotification(application, NotificationType.APPLICATION_REJECTED);
+       }
     }
 
     @Transactional
@@ -133,6 +143,15 @@ public class ProjectApplicationService {
                            .build())
                    .toList());
        }
+
+       eventPublisher.publishEvent(new ApplicationNotificationEvent(
+               recruitment.getProject().getAuthor().getUserId(),
+               NotificationType.APPLICATION_RECEIVED,
+               "새로운 프로젝트 지원이 도착했어요",
+               user.getNickName() + "님이 '" + recruitment.getProject().getTitle() + "' 프로젝트에 지원했어요.",
+               "/projects/" + recruitment.getProject().getId() + "/manage#applicants",
+               application.getId()
+       ));
    }
 
    @Transactional
@@ -216,5 +235,22 @@ public class ProjectApplicationService {
        return options.stream()
                .filter(distinctSelections::contains)
                .collect(Collectors.joining(","));
+   }
+
+   private void publishApplicationResultNotification(
+           ProjectApplication application,
+           NotificationType type) {
+       Project project = application.getRecruitment().getProject();
+       boolean approved = type == NotificationType.APPLICATION_APPROVED;
+
+       eventPublisher.publishEvent(new ApplicationNotificationEvent(
+               application.getUser().getUserId(),
+               type,
+               approved ? "프로젝트 지원이 승인됐어요" : "프로젝트 지원 결과가 도착했어요",
+               "'" + project.getTitle() + "' 프로젝트 지원이 "
+                       + (approved ? "승인되었습니다." : "거절되었습니다."),
+               "/mypage/applications",
+               application.getId()
+       ));
    }
 }
