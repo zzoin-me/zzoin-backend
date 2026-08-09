@@ -60,7 +60,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(request -> {
                     var config = new org.springframework.web.cors.CorsConfiguration();
                     config.setAllowedOriginPatterns(java.util.List.of(
-                            "*",
+                            "https://zzoin.me",
                             "capacitor://localhost",
                             "http://localhost",
                             "http://localhost:5173",
