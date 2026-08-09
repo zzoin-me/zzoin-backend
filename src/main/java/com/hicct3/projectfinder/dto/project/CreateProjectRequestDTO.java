@@ -3,6 +3,7 @@ package com.hicct3.projectfinder.dto.project;
 import com.hicct3.projectfinder.dto.project.recruitment.CreateRecruitmentRequestDTO;
 import com.hicct3.projectfinder.entity.enums.CollaborationType;
 import com.hicct3.projectfinder.entity.enums.GoalType;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -49,6 +50,11 @@ public class CreateProjectRequestDTO {
     private String imageUrl;
 
     @NotNull
+    @Valid
     private List<CreateRecruitmentRequestDTO> recruitments;
+
+    @Valid
+    @Size(max = 10, message = "질문은 최대 10개까지 등록할 수 있습니다.")
+    private List<CreateQuestionRequestDTO> questions;
 
 }

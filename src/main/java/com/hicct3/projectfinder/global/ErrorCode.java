@@ -92,7 +92,13 @@ public enum ErrorCode {
     ALREADY_REVIEWED(HttpStatus.BAD_REQUEST, "이미 평가를 작성했습니다."),
 
     //Applications
-    APPLICATION_ALREADY_PROCESSED(HttpStatus.BAD_REQUEST, "이미 처리된 지원입니다.");
+    APPLICATION_ALREADY_PROCESSED(HttpStatus.BAD_REQUEST, "이미 처리된 지원입니다."),
+
+    // Questions
+    QUESTION_NOT_FOUND(HttpStatus.BAD_REQUEST, "프로젝트에 존재하지 않는 질문입니다."),
+    QUESTION_ANSWER_REQUIRED(HttpStatus.BAD_REQUEST, "필수 질문에 답변해야 합니다."),
+    QUESTION_ANSWER_DUPLICATE(HttpStatus.BAD_REQUEST, "같은 질문에 중복으로 답변할 수 없습니다."),
+    INVALID_QUESTION_ANSWER(HttpStatus.BAD_REQUEST, "질문의 선택지에 맞지 않는 답변입니다.");
 
     private final HttpStatus status;
     private final String message;

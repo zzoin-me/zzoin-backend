@@ -33,6 +33,7 @@ public class ProjectService {
     private final JobRoleRepository jobRoleRepository;
     private final JobCategoryRepository jobCategoryRepository;
     private final UserRepository userRepository;
+    private final ProjectQuestionRepository projectQuestionRepository;
     private final RecruitmentService recruitmentService;
 
     @Transactional
@@ -306,6 +307,8 @@ public class ProjectService {
         //직군 저장
         recruitmentService.createRecruitments(savedProject, req.getRecruitments());
 
+        createQuestions(savedProject, req.getQuestions());
+
         //생성자를 멤버로 할당
         var member = ProjectMember.builder()
                 .status(MemberStatus.IN_PROGRESS)
@@ -317,6 +320,40 @@ public class ProjectService {
 
         projectMemberRepository.save(member);
 
+    }
+
+    private void createQuestions(Project project, List<CreateQuestionRequestDTO> requests) {
+        if (requests == null || requests.isEmpty()) {
+            return;
+        }
+
+        List<ProjectQuestion> questions = new ArrayList<>();
+
+        for (int i = 0; i < requests.size(); i++) {
+            CreateQuestionRequestDTO request = requests.get(i);
+            List<String> options = request.getOptions() == null
+                    ? Collections.emptyList()
+                    : request.getOptions().stream()
+                            .map(String::trim)
+                            .filter(option -> !option.isEmpty())
+                            .toList();
+
+            if (request.getType() != QuestionType.TEXT && options.size() < 2) {
+                throw new GeneralException("선택형 질문은 선택지를 2개 이상 등록해야 합니다.");
+            }
+
+            questions.add(ProjectQuestion.builder()
+                    .project(project)
+                    .orderIndex(i)
+                    .type(request.getType())
+                    .label(request.getLabel().trim())
+                    .options(request.getType() == QuestionType.TEXT ? null : String.join(",", options))
+                    .required(request.getRequired())
+                    .createdAt(LocalDateTime.now())
+                    .build());
+        }
+
+        projectQuestionRepository.saveAll(questions);
     }
 
 
@@ -418,4 +455,3 @@ public class ProjectService {
     }
 
 }
-

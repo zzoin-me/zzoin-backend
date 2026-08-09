@@ -10,4 +10,5 @@ import java.util.List;
 public interface ApplicationAnswerRepository extends JpaRepository<ApplicationAnswer, Long> {
     List<ApplicationAnswer> findAllByApplicationIn(Collection<ProjectApplication> applications);
     List<ApplicationAnswer> findAllByApplication(ProjectApplication application);
+    void deleteAllByApplication(ProjectApplication application);
 }

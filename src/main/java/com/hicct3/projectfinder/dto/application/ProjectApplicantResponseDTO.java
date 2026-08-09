@@ -28,10 +28,14 @@ public class ProjectApplicantResponseDTO {
     private Integer grade;
     private Double ratingAvg;
     private ApplicationStatus status;
+    private List<AnswerResponseDTO> answers;
 
     private List<ProjectMemberResponseDTO> histories;
 
-    public static ProjectApplicantResponseDTO from(ProjectApplication application, List<ProjectMember> members)
+    public static ProjectApplicantResponseDTO from(
+            ProjectApplication application,
+            List<ProjectMember> members,
+            List<AnswerResponseDTO> answers)
     {
         return ProjectApplicantResponseDTO.builder()
                 .applicationId(application.getId())
@@ -48,6 +52,7 @@ public class ProjectApplicantResponseDTO {
                 .grade(application.getUser().getGrade())
                 .ratingAvg(application.getUser().getRatingAvg())
                 .status(application.getStatus())
+                .answers(answers)
                 .histories(members.stream().map(ProjectMemberResponseDTO::from).toList())
                 .build();
     }
