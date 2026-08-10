@@ -7,7 +7,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
-import java.util.Map;
 
 public interface PostRepositoryCustom {
     Page<Post> searchPosts(
@@ -18,11 +17,6 @@ public interface PostRepositoryCustom {
             Pageable pageable
     );
 
-    long countLikesByPostId(Long postId);
-    long countCommentsByPostId(Long postId);
-
-    Map<Long, Long> countLikesByPostIds(List<Long> postIds);
-    Map<Long, Long> countCommentsByPostIds(List<Long> postIds);
     List<Long> findLikedPostIds(Long userId, List<Long> postIds);
     List<Long> findSavedPostIds(Long userId, List<Long> postIds);
 }

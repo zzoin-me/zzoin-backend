@@ -1,6 +1,7 @@
 package com.hicct3.projectfinder.service;
 
 import com.hicct3.projectfinder.dto.community.CommentResponseDTO;
+import com.hicct3.projectfinder.dto.community.CommentPageResponseDTO;
 import com.hicct3.projectfinder.dto.community.CreateCommentRequestDTO;
 import com.hicct3.projectfinder.entity.Comment;
 import com.hicct3.projectfinder.entity.Post;
@@ -16,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.Clock;
+import org.springframework.data.domain.PageRequest;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -27,6 +30,7 @@ public class CommentService {
     private final PostRepository postRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final Clock clock;
 
     @Transactional
     public CommentResponseDTO createComment(Long userId, Long postId, CreateCommentRequestDTO req) {
@@ -46,6 +50,9 @@ public class CommentService {
             if (parent.isDeleted()) {
                 throw new GeneralException(ErrorCode.COMMENT_NOT_FOUND);
             }
+            if (parent.getPost() == null || !parent.getPost().getId().equals(postId)) {
+                throw new GeneralException(ErrorCode.COMMENT_NOT_FOUND);
+            }
             if (parent.getDepth() >= 1) {
                 throw new GeneralException(ErrorCode.COMMENT_DEPTH_EXCEEDED);
             }
@@ -58,11 +65,11 @@ public class CommentService {
                 .post(post)
                 .parent(parent)
                 .depth(depth)
-                .createdAt(LocalDateTime.now())
+                .createdAt(LocalDateTime.now(clock))
                 .build();
 
         Comment saved = commentRepository.save(comment);
-        post.increaseCommentCount();
+        postRepository.increaseCommentCount(postId);
 
         if (parent != null) {
             if (!parent.getAuthor().getUserId().equals(userId) && !parent.getAuthor().getUserId().equals(post.getAuthor().getUserId())) {
@@ -98,13 +105,33 @@ public class CommentService {
     @Transactional
     public void deleteComment(Long userId, Long commentId) {
         Comment comment = getOwnedComment(userId, commentId);
-        comment.setDeletedAt(LocalDateTime.now());
-        comment.getPost().decreaseCommentCount();
+        comment.setDeletedAt(LocalDateTime.now(clock));
+        postRepository.decreaseCommentCount(comment.getPost().getId());
     }
 
     @Transactional
-    public List<CommentResponseDTO> getComments(Long postId, Long currentUserId) {
-        List<Comment> comments = commentRepository.findByPostIdOrderByCreatedAtAsc(postId);
+    public CommentPageResponseDTO getComments(
+            Long postId,
+            Long currentUserId,
+            Long afterId,
+            int size
+    ) {
+        int pageSize = Math.max(1, Math.min(size, 50));
+        List<Long> fetchedRootIds = commentRepository.findRootIdsAfter(
+                postId, afterId, PageRequest.of(0, pageSize + 1));
+        boolean hasNext = fetchedRootIds.size() > pageSize;
+        List<Long> rootIds = hasNext
+                ? fetchedRootIds.subList(0, pageSize)
+                : fetchedRootIds;
+        if (rootIds.isEmpty()) {
+            return CommentPageResponseDTO.builder()
+                    .comments(List.of())
+                    .nextCursor(null)
+                    .hasNext(false)
+                    .build();
+        }
+
+        List<Comment> comments = commentRepository.findTreesByRootIds(postId, rootIds);
         List<CommentResponseDTO> dtos = comments.stream()
                 .map(c -> CommentResponseDTO.of(c, currentUserId))
                 .collect(Collectors.toList());
@@ -127,7 +154,11 @@ public class CommentService {
                 }
             }
         }
-        return roots;
+        return CommentPageResponseDTO.builder()
+                .comments(roots)
+                .nextCursor(hasNext ? rootIds.get(rootIds.size() - 1) : null)
+                .hasNext(hasNext)
+                .build();
     }
 
     private Comment getOwnedComment(Long userId, Long commentId) {

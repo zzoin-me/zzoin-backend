@@ -5,10 +5,12 @@ import com.hicct3.projectfinder.dto.application.DeleteProjectRequestDTO;
 import com.hicct3.projectfinder.dto.application.ProjectApplicantsResponseDTO;
 import com.hicct3.projectfinder.dto.application.UpdateApplicantStatusDTO;
 import com.hicct3.projectfinder.dto.project.*;
+import com.hicct3.projectfinder.dto.common.PageResponseDTO;
 import com.hicct3.projectfinder.entity.enums.GoalType;
 import com.hicct3.projectfinder.dto.project.review.CreateReviewRequestDTO;
 import com.hicct3.projectfinder.dto.project.review.MemberReviewsResponseDTO;
 import com.hicct3.projectfinder.dto.project.review.MembersResponseDTO;
+import com.hicct3.projectfinder.dto.project.review.ReviewTargetsResponseDTO;
 import com.hicct3.projectfinder.entity.enums.JobCategoryCode;
 import com.hicct3.projectfinder.entity.enums.SortType;
 import com.hicct3.projectfinder.global.ApiResponse;
@@ -16,10 +18,10 @@ import com.hicct3.projectfinder.global.CustomUserDetails;
 import com.hicct3.projectfinder.service.ProjectApplicationService;
 import com.hicct3.projectfinder.service.ProjectQueryService;
 import com.hicct3.projectfinder.service.ProjectService;
+import com.hicct3.projectfinder.service.ReviewService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -34,13 +36,26 @@ public class ProjectController {
     private final ProjectService projectService;
     private final ProjectQueryService projectQueryService;
     private final ProjectApplicationService projectApplicationService;
+    private final ReviewService reviewService;
 
     @Operation(summary = "팀원 목록 조회")
     @GetMapping("/{projectId}/members")
     public ApiResponse<MembersResponseDTO> getMembers(Authentication authentication, @PathVariable Long projectId) {
         CustomUserDetails userDetails =
                 (CustomUserDetails) authentication.getPrincipal();
-        return ApiResponse.onSuccess("팀원 목록 조회에 성공했습니다.", projectService.getMembers(userDetails.getId(), projectId));
+        return ApiResponse.onSuccess("팀원 목록 조회에 성공했습니다.", reviewService.getMembers(userDetails.getId(), projectId));
+    }
+
+    @Operation(summary = "팀원 평가 대상 조회")
+    @GetMapping("/{projectId}/review-targets")
+    public ApiResponse<ReviewTargetsResponseDTO> getReviewTargets(
+            Authentication authentication,
+            @PathVariable Long projectId
+    ) {
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        return ApiResponse.onSuccess(
+                "팀원 평가 대상 조회에 성공했습니다.",
+                reviewService.getReviewTargets(userDetails.getId(), projectId));
     }
 
     @Operation(summary = "팀원 평가 상세 조회")
@@ -48,7 +63,7 @@ public class ProjectController {
     public ApiResponse<MemberReviewsResponseDTO> getMemberReviews(Authentication authentication, @PathVariable Long projectId) {
         CustomUserDetails userDetails =
                 (CustomUserDetails) authentication.getPrincipal();
-        return ApiResponse.onSuccess("팀원 평가 상세 조회에 성공했습니다.", projectService.getMyReviews(userDetails.getId(), projectId));
+        return ApiResponse.onSuccess("팀원 평가 상세 조회에 성공했습니다.", reviewService.getMyProjectReviews(userDetails.getId(), projectId));
     }
 
     @Operation(summary = "팀원 평가 등록")
@@ -57,7 +72,7 @@ public class ProjectController {
     {
         CustomUserDetails userDetails =
                 (CustomUserDetails) authentication.getPrincipal();
-        projectService.createReview(userDetails.getId(), projectId, req);
+        reviewService.createReview(userDetails.getId(), projectId, req);
         return ApiResponse.onSuccess("팀원 평가 등록에 성공했습니다.", null);
     }
 
@@ -109,7 +124,7 @@ public class ProjectController {
 
     @Operation(summary = "프로젝트 목록 검색")
     @GetMapping
-    public ApiResponse<Page<ProjectPreviewResponseDTO>> getProjects(
+    public ApiResponse<PageResponseDTO<ProjectPreviewResponseDTO>> getProjects(
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "LATEST") String sort,
             @RequestParam(required = false) JobCategoryCode category,
@@ -123,7 +138,9 @@ public class ProjectController {
     )
     {
         SortType sortType = SortType.from(sort);
-        return ApiResponse.onSuccess(projectQueryService.getProjectList(sortType, keyword, category, name, maxDays, minCount, maxCount, goal, recruitingOnly, pageable));
+        return ApiResponse.onSuccess(PageResponseDTO.from(
+                projectQueryService.getProjectList(sortType, keyword, category, name,
+                        maxDays, minCount, maxCount, goal, recruitingOnly, pageable)));
     }
 
     @Operation(summary = "프로젝트 상세 조회")

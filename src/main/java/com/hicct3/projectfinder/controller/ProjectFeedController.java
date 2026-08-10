@@ -1,12 +1,12 @@
 package com.hicct3.projectfinder.controller;
 
 import com.hicct3.projectfinder.global.ApiResponse;
+import com.hicct3.projectfinder.dto.common.PageResponseDTO;
 import com.hicct3.projectfinder.dto.project.ProjectPreviewResponseDTO;
 import com.hicct3.projectfinder.global.CustomUserDetails;
 import com.hicct3.projectfinder.service.ProjectQueryService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,15 +22,17 @@ public class ProjectFeedController {
 
     @Operation(summary = "인기 프로젝트 목록")
     @GetMapping("/popular")
-    public ApiResponse<Page<ProjectPreviewResponseDTO>> getPopularProjects(Pageable pageable) {
-        return ApiResponse.onSuccess(projectQueryService.getPopularProjects(pageable));
+    public ApiResponse<PageResponseDTO<ProjectPreviewResponseDTO>> getPopularProjects(Pageable pageable) {
+        return ApiResponse.onSuccess(PageResponseDTO.from(
+                projectQueryService.getPopularProjects(pageable)));
     }
 
     @Operation(summary = "추천 프로젝트 목록")
     @GetMapping("/recommend")
-    public ApiResponse<Page<ProjectPreviewResponseDTO>> getRecommendProjects(
+    public ApiResponse<PageResponseDTO<ProjectPreviewResponseDTO>> getRecommendProjects(
             Authentication authentication, Pageable pageable) {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        return ApiResponse.onSuccess(projectQueryService.getRecommendProjects(userDetails.getId(), pageable));
+        return ApiResponse.onSuccess(PageResponseDTO.from(
+                projectQueryService.getRecommendProjects(userDetails.getId(), pageable)));
     }
 }

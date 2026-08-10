@@ -7,7 +7,13 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name="projectApplications")
+@Table(
+        name="projectApplications",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_project_application_project_user",
+                columnNames = {"project_id", "user_id"}
+        )
+)
 @Getter
 @Setter
 @Builder
@@ -21,6 +27,7 @@ public class ProjectApplication {
     @Column(nullable = false)
     private String letter;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ApplicationStatus status;
 
@@ -34,4 +41,8 @@ public class ProjectApplication {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "recruitment_id")
     private ProjectRecruitment recruitment;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id", nullable = false)
+    private Project project;
 }

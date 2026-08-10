@@ -45,3 +45,4 @@ src/main/resources/firebase-service-account.json
 ### sh, sql ###
 *.sh
 *.sql
+!src/main/resources/db/migration/*.sql

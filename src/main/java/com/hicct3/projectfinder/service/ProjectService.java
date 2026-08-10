@@ -5,7 +5,6 @@ import com.hicct3.projectfinder.dto.project.myproject.MyApplicationPreviewRespon
 import com.hicct3.projectfinder.dto.project.myproject.MyProjectPreviewResponseDTO;
 import com.hicct3.projectfinder.entity.Project;
 import com.hicct3.projectfinder.entity.enums.*;
-import com.hicct3.projectfinder.dto.project.review.*;
 import com.hicct3.projectfinder.entity.*;
 import com.hicct3.projectfinder.global.ErrorCode;
 import com.hicct3.projectfinder.global.GeneralException;
@@ -18,9 +17,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.Clock;
 import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,241 +27,13 @@ public class ProjectService {
     private final ProjectRecruitmentRepository projectRecruitmentRepository;
     private final ProjectApplicationRepository projectApplicationRepository;
     private final ProjectMemberRepository projectMemberRepository;
-    private final MemberReviewRepository memberReviewRepository;
     private final JobRoleRepository jobRoleRepository;
     private final JobCategoryRepository jobCategoryRepository;
     private final UserRepository userRepository;
     private final ProjectQuestionRepository projectQuestionRepository;
     private final RecruitmentService recruitmentService;
-
-    @Transactional
-    public void createReview(Long userId, Long projectId, CreateReviewRequestDTO req) {
-        var project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new GeneralException(ErrorCode.PROJECT_NOT_FOUND));
-
-        var user = userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(ErrorCode.USER_NOT_FOUND));
-
-        // 프로젝트가 종료되었는지
-        if (project.getStatus() != ProjectStatus.COMPLETED) {
-            throw new GeneralException(ErrorCode.PROJECT_NOT_COMPLETED);
-        }
-
-        // 작성자가 프로젝트 멤버인지
-        if (!projectMemberRepository.existsByUserAndProject(user, project)) {
-            throw new GeneralException(ErrorCode.PROJECT_MEMBER_NOT_FOUND);
-        }
-
-        // 이미 평가를 작성했는지
-        if (memberReviewRepository.existsByAuthorAndProject(user, project)) {
-            throw new GeneralException(ErrorCode.ALREADY_REVIEWED);
-        }
-
-        List<Long> targetIds = req.getMembers().stream()
-                .map(CreateMemberReviewRequestDTO::getUserId)
-                .toList();
-
-        // 자기 자신 평가 금지
-        if (targetIds.contains(userId)) {
-            throw new GeneralException(ErrorCode.CANNOT_REVIEW_SELF);
-        }
-
-        // 중복 평가 대상
-        if (targetIds.size() != new HashSet<>(targetIds).size()) {
-            throw new GeneralException(ErrorCode.USER_ID_DUPLICATE);
-        }
-
-        // 프로젝트 멤버 조회
-        List<ProjectMember> projectMembers = projectMemberRepository.findAllByProject(project);
-
-        // 자기 자신을 제외한 모든 프로젝트 멤버 ID
-        Set<Long> expectedTargetIds = projectMembers.stream()
-                .map(pm -> pm.getUser().getUserId())
-                .filter(id -> !id.equals(userId))
-                .collect(Collectors.toSet());
-
-        Set<Long> requestTargetIds = new HashSet<>(targetIds);
-
-        // 일부만 평가하거나, 프로젝트 외 유저를 포함한 경우
-        if (!expectedTargetIds.equals(requestTargetIds)) {
-            throw new GeneralException(ErrorCode.REVIEW_TARGET_INVALID);
-        }
-
-        // 평가 대상 유저 조회
-        Map<Long, User> targetUsers = userRepository.findAllById(targetIds).stream()
-                .collect(Collectors.toMap(User::getUserId, Function.identity()));
-
-        if (targetUsers.size() != targetIds.size()) {
-            throw new GeneralException(ErrorCode.USER_NOT_FOUND);
-        }
-
-        List<MemberReview> reviews = req.getMembers().stream()
-                .map(member -> MemberReview.builder()
-                        .contribution(member.getContribution())
-                        .participation(member.getParticipation())
-                        .responsibility(member.getResponsibility())
-                        .comment(member.getComment())
-                        .author(user)
-                        .target(targetUsers.get(member.getUserId()))
-                        .project(project)
-                        .createdAt(LocalDateTime.now())
-                        .build())
-                .toList();
-
-        memberReviewRepository.saveAll(reviews);
-    }
-
-    //해당 프로젝트의 맴버 목록 조회
-    @Transactional
-    public MembersResponseDTO getMembers(Long userId, Long projectId)
-    {
-        var project = projectRepository.findById(projectId).orElseThrow(()->new GeneralException(ErrorCode.PROJECT_NOT_FOUND));
-        var user = userRepository.findById(userId).orElseThrow(()->new GeneralException(ErrorCode.USER_NOT_FOUND));
-
-        //user가 project에 참여중인지 확인
-        if(!projectMemberRepository.existsByUserAndProject(user, project))
-            throw new GeneralException(ErrorCode.USER_NOT_IN_PROJECT);
-
-        //해당 프로젝트의 팀원 목록 조회해서 반환
-        return MembersResponseDTO.builder()
-                .members(
-                        projectMemberRepository.findAllByProject(project)
-                                .stream()
-                                .map(MemberResponseDTO::from)
-                                .toList()
-                )
-                .build();
-    }
-
-    @Transactional
-    public Page<MyReviewableProjectResponseDTO> getMyReviewableProjects(
-            Long userId,
-            Pageable pageable
-    ) {
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(ErrorCode.USER_NOT_FOUND));
-
-        Page<ProjectMember> members = projectMemberRepository
-                .findByUserAndProject_Status(
-                        user,
-                        ProjectStatus.COMPLETED,
-                        pageable
-                );
-
-        return members.map(member -> {
-
-            Project project = member.getProject();
-
-            long reviewedCount =
-                    memberReviewRepository.countByAuthorAndProject(user, project);
-
-            long otherMemberCount =
-                    projectMemberRepository.countByProjectAndUserNot(project, user);
-
-            boolean reviewCompleted = reviewedCount >= otherMemberCount;
-
-            return MyReviewableProjectResponseDTO.builder()
-                    .projectId(project.getId())
-                    .title(project.getTitle())
-                    .recruitment(member.getJobName())
-                    .joinedAt(member.getJoinedAt())
-                    .completedAt(member.getCompletedAt())
-                    .reviewCompleted(reviewCompleted)
-                    .build();
-        });
-    }
-
-    //내가 작성한 팀원 평가 조회
-    @Transactional
-    public MemberReviewsResponseDTO getMyReviews(Long userId, Long projectId)
-    {
-        var project = projectRepository.findById(projectId).orElseThrow(()->new GeneralException(ErrorCode.PROJECT_NOT_FOUND));
-        var user = userRepository.findById(userId).orElseThrow(()->new GeneralException(ErrorCode.USER_NOT_FOUND));
-
-        //user가 project에 참여중인지 확인
-        if(!projectMemberRepository.existsByUserAndProject(user, project))
-            throw new GeneralException(ErrorCode.USER_NOT_IN_PROJECT);
-
-        Map<User, List<String>> recruitmentMap = projectMemberRepository
-                .findAllByProject(project)
-                .stream()
-                .collect(Collectors.groupingBy(
-                        ProjectMember::getUser,
-                        Collectors.mapping(ProjectMember::getJobName, Collectors.toList())
-                ));
-
-        List<MemberReviewResponseDTO> result = memberReviewRepository
-                .findAllByAuthorAndProject(user, project)
-                .stream()
-                .map(memberReview -> MemberReviewResponseDTO.builder()
-                        .memberId(memberReview.getId())
-                        .nickname(memberReview.getTarget().getNickName())
-                        .recruitments(recruitmentMap.get(memberReview.getTarget()))
-                        .profileUrl(memberReview.getTarget().getProfileUrl())
-                        .contribution(memberReview.getContribution())
-                        .responsibility(memberReview.getResponsibility())
-                        .participation(memberReview.getParticipation())
-                        .build())
-                .toList();
-
-        return MemberReviewsResponseDTO.builder()
-                .members(result)
-                .build();
-
-    }
-
-    // 내가 받은 평가 조회
-    @Transactional
-    public MyReviewsResponseDTO getReceivedReviews(Long userId) {
-        var user = userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(ErrorCode.USER_NOT_FOUND));
-
-        var reviews = memberReviewRepository.findAllByTarget(user);
-
-        int[] scores = new int[6];
-        int totalScore = 0;
-        int totalCount = 0;
-
-        // 점수 집계
-        for (MemberReview review : reviews) {
-            scores[review.getContribution()]++;
-            scores[review.getParticipation()]++;
-            scores[review.getResponsibility()]++;
-
-            totalScore += review.getContribution();
-            totalScore += review.getParticipation();
-            totalScore += review.getResponsibility();
-
-            totalCount += 3;
-        }
-
-        double averageScore = totalCount == 0
-                ? 0.0
-                : Math.round((double) totalScore / totalCount * 10) / 10.0; // 소수 첫째 자리
-
-        var reviewDtos = reviews.stream()
-                .map(review -> MyReviewResponseDTO.builder()
-                        .projectName(review.getProject().getTitle())
-                        .comment(review.getComment())
-                        .contribution(review.getContribution())
-                        .responsibility(review.getResponsibility())
-                        .participation(review.getParticipation())
-                        .createdAt(review.getCreatedAt())
-                        .avgRating(review.getAverage())
-                        .build())
-                .toList();
-
-        return MyReviewsResponseDTO.builder()
-                .reviews(reviewDtos)
-                .ratingAvg(averageScore)   // DTO에 필드 추가 필요
-                .score1(scores[1])
-                .score2(scores[2])
-                .score3(scores[3])
-                .score4(scores[4])
-                .score5(scores[5])
-                .build();
-    }
+    private final ProjectDeadlineScheduler projectDeadlineScheduler;
+    private final Clock clock;
 
     @Transactional
     public Page<MyProjectPreviewResponseDTO> getMyProjects(
@@ -310,7 +80,7 @@ public class ProjectService {
         }
 
         //프로젝트 엔티티 생성
-        Project savedProject = projectRepository.save(Project.create(req, user));
+        Project savedProject = projectRepository.save(Project.create(req, user, clock));
 
         //직군 저장
         recruitmentService.createRecruitments(savedProject, req.getRecruitments());
@@ -319,14 +89,17 @@ public class ProjectService {
 
         //생성자를 멤버로 할당
         var member = ProjectMember.builder()
-                .status(MemberStatus.IN_PROGRESS)
+                .status(MemberStatus.ACTIVE)
                 .user(user)
                 .project(savedProject)
                 .role(Role.OWNER)
-                .joinedAt(LocalDateTime.now())
+                .joinedAt(LocalDateTime.now(clock))
                 .build();
 
         projectMemberRepository.save(member);
+        projectDeadlineScheduler.scheduleAfterCommit(
+                savedProject.getId(),
+                savedProject.getRecruitmentDeadline());
 
     }
 
@@ -357,7 +130,7 @@ public class ProjectService {
                     .label(request.getLabel().trim())
                     .options(request.getType() == QuestionType.TEXT ? null : String.join(",", options))
                     .required(request.getRequired())
-                    .createdAt(LocalDateTime.now())
+                    .createdAt(LocalDateTime.now(clock))
                     .build());
         }
 
@@ -381,7 +154,10 @@ public class ProjectService {
         if(!project.getAuthor().getUserId().equals(user.getUserId()))
             throw new GeneralException(ErrorCode.AUTHOR_MISMATCHED);
 
-        project.setUpdatedAt(LocalDateTime.now());
+        if(project.getStatus() != ProjectStatus.RECRUITING)
+            throw new GeneralException(ErrorCode.PROJECT_EDIT_CLOSED);
+
+        project.setUpdatedAt(LocalDateTime.now(clock));
 
         if(req.getTitle() != null)
             project.setTitle(req.getTitle());
@@ -401,8 +177,14 @@ public class ProjectService {
         if(req.getPeriod() != null)
             project.setPeriod(req.getPeriod());
 
-        if(req.getRecruitmentDeadline() != null)
+        if(req.getRecruitmentDeadline() != null) {
             project.setRecruitmentDeadline(req.getRecruitmentDeadline());
+            if (project.getStatus() == ProjectStatus.RECRUITING) {
+                projectDeadlineScheduler.scheduleAfterCommit(
+                        project.getId(),
+                        req.getRecruitmentDeadline());
+            }
+        }
 
         if(req.getGoalType() != null)
             project.setGoal(req.getGoalType());
@@ -430,7 +212,11 @@ public class ProjectService {
         if(!project.getAuthor().getUserId().equals(user.getUserId()))
             throw new GeneralException(ErrorCode.AUTHOR_MISMATCHED);
 
-       project.setDeletedAt(LocalDateTime.now());
+        if(projectApplicationRepository.existsByProject(project))
+            throw new GeneralException(ErrorCode.PROJECT_HAS_APPLICATIONS);
+
+       project.setDeletedAt(LocalDateTime.now(clock));
+       projectDeadlineScheduler.cancelAfterCommit(project.getId());
     }
 
     //프로젝트 상태 변경
@@ -451,15 +237,43 @@ public class ProjectService {
         if(!project.getAuthor().getUserId().equals(user.getUserId()))
             throw new GeneralException(ErrorCode.AUTHOR_MISMATCHED);
 
+        validateStatusTransition(project.getStatus(), req.getStatus());
+
+        if (req.getStatus() == ProjectStatus.IN_PROGRESS
+                && projectApplicationRepository.existsByProjectAndStatus(
+                        project, ApplicationStatus.PENDING)) {
+            throw new GeneralException(ErrorCode.PENDING_APPLICATIONS_EXIST);
+        }
+
         if(req.getStatus().equals(ProjectStatus.COMPLETED))
         {
             for (ProjectMember projectMember : projectMemberRepository.findAllByProject(project)) {
-                projectMember.setCompletedAt(LocalDateTime.now());
+                projectMember.setCompletedAt(LocalDateTime.now(clock));
                 projectMember.setStatus(MemberStatus.COMPLETED);
             }
         }
 
         project.setStatus(req.getStatus());
+        project.setUpdatedAt(LocalDateTime.now(clock));
+        if (req.getStatus() == ProjectStatus.RECRUITING) {
+            projectDeadlineScheduler.scheduleAfterCommit(
+                    project.getId(),
+                    project.getRecruitmentDeadline());
+        } else {
+            projectDeadlineScheduler.cancelAfterCommit(project.getId());
+        }
+    }
+
+    private void validateStatusTransition(ProjectStatus current, ProjectStatus next) {
+        boolean valid = (current == ProjectStatus.RECRUITING
+                && next == ProjectStatus.RECRUITMENT_CLOSED)
+                || (current == ProjectStatus.RECRUITMENT_CLOSED
+                && next == ProjectStatus.IN_PROGRESS)
+                || (current == ProjectStatus.IN_PROGRESS
+                && next == ProjectStatus.COMPLETED);
+        if (!valid) {
+            throw new GeneralException(ErrorCode.INVALID_PROJECT_STATUS_TRANSITION);
+        }
     }
 
 }

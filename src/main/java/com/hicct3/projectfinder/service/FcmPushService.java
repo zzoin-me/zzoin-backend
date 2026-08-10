@@ -13,6 +13,7 @@ import com.hicct3.projectfinder.repository.DeviceTokenRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.scheduling.annotation.Async;
 
 import java.util.HashMap;
 import java.util.List;
@@ -25,6 +26,7 @@ public class FcmPushService {
 
     private final DeviceTokenRepository deviceTokenRepository;
 
+    @Async
     public void sendToUser(Long userId, String title, String body, String targetUrl) {
         try {
             if (FirebaseApp.getApps().isEmpty()) {
@@ -32,9 +34,7 @@ public class FcmPushService {
                 return;
             }
 
-            List<DeviceToken> tokens = deviceTokenRepository.findAll().stream()
-                    .filter(t -> t.getUser().getUserId().equals(userId))
-                    .toList();
+            List<DeviceToken> tokens = deviceTokenRepository.findAllByUser_UserId(userId);
 
             if (tokens.isEmpty()) {
                 log.debug("No device tokens for user {}", userId);

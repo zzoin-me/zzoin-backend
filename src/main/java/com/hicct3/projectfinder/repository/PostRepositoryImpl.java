@@ -8,12 +8,8 @@ import com.hicct3.projectfinder.entity.QPostLike;
 import com.hicct3.projectfinder.entity.QPostSave;
 import com.hicct3.projectfinder.entity.enums.PostBoardType;
 import com.hicct3.projectfinder.entity.enums.PostSortType;
-import com.querydsl.core.Tuple;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
-import com.querydsl.core.types.OrderSpecifier;
-import com.querydsl.core.types.dsl.BooleanExpression;
-import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -81,6 +77,7 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
 
         List<Post> content = queryFactory
                 .selectFrom(post)
+                .leftJoin(post.author).fetchJoin()
                 .where(where)
                 .orderBy(sortOrder(post, sortType))
                 .offset(pageable.getOffset())
@@ -94,72 +91,6 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
                 .fetchOne();
 
         return new PageImpl<>(content, pageable, total != null ? total : 0);
-    }
-
-    @Override
-    public long countLikesByPostId(Long postId) {
-        QPostLike postLike = QPostLike.postLike;
-        Long count = queryFactory
-                .select(postLike.count())
-                .from(postLike)
-                .where(postLike.post.id.eq(postId))
-                .fetchOne();
-        return count != null ? count : 0;
-    }
-
-    @Override
-    public long countCommentsByPostId(Long postId) {
-        QComment comment = QComment.comment;
-        Long count = queryFactory
-                .select(comment.count())
-                .from(comment)
-                .where(comment.post.id.eq(postId)
-                        .and(comment.deletedAt.isNull()))
-                .fetchOne();
-        return count != null ? count : 0;
-    }
-
-    @Override
-    public Map<Long, Long> countLikesByPostIds(List<Long> postIds) {
-        if (postIds == null || postIds.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        QPostLike postLike = QPostLike.postLike;
-        List<Tuple> rows = queryFactory
-                .select(postLike.post.id, postLike.count())
-                .from(postLike)
-                .where(postLike.post.id.in(postIds))
-                .groupBy(postLike.post.id)
-                .fetch();
-        Map<Long, Long> result = new HashMap<>();
-        for (Tuple row : rows) {
-            Long postId = row.get(0, Long.class);
-            Long count = row.get(1, Long.class);
-            result.put(postId, count != null ? count : 0L);
-        }
-        return result;
-    }
-
-    @Override
-    public Map<Long, Long> countCommentsByPostIds(List<Long> postIds) {
-        if (postIds == null || postIds.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        QComment comment = QComment.comment;
-        List<Tuple> rows = queryFactory
-                .select(comment.post.id, comment.count())
-                .from(comment)
-                .where(comment.post.id.in(postIds)
-                        .and(comment.deletedAt.isNull()))
-                .groupBy(comment.post.id)
-                .fetch();
-        Map<Long, Long> result = new HashMap<>();
-        for (Tuple row : rows) {
-            Long postId = row.get(0, Long.class);
-            Long count = row.get(1, Long.class);
-            result.put(postId, count != null ? count : 0L);
-        }
-        return result;
     }
 
     @Override
@@ -198,16 +129,17 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
                 .or(post.content.contains(keyword));
     }
 
-    private OrderSpecifier<?> sortOrder(QPost post, PostSortType sortType) {
+    private OrderSpecifier<?>[] sortOrder(QPost post, PostSortType sortType) {
         if (sortType == PostSortType.POPULAR) {
-            return Expressions.numberTemplate(Double.class,
-                "({0} * 5 + {1} * 3 + {2}) * POW(0.95, DATEDIFF(CURDATE(), {3}))",
-                post.likeCount,
-                post.commentCount,
-                post.viewCount,
-                post.createdAt
-            ).desc();
+            return new OrderSpecifier<?>[] {
+                    post.likeCount.multiply(5)
+                            .add(post.commentCount.multiply(3))
+                            .add(post.viewCount)
+                            .desc(),
+                    post.createdAt.desc(),
+                    post.id.desc()
+            };
         }
-        return post.createdAt.desc();
+        return new OrderSpecifier<?>[] {post.createdAt.desc(), post.id.desc()};
     }
 }

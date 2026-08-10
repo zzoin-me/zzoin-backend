@@ -63,6 +63,7 @@ public class SecurityConfig {
                             "https://zzoin.me",
                             "capacitor://localhost",
                             "http://localhost",
+                            "https://localhost",
                             "http://localhost:5173",
                             "https://zzoin.vercel.app"
                     ));
@@ -122,14 +123,18 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/refreshToken").permitAll()
                         .requestMatchers("/api/auth/link-account").permitAll()
                         .requestMatchers("/oauth2/**", "/login/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/api/univs/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/project-feeds/popular").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/project-feeds/recommend").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/projects/chats").hasRole("VERIFIED")
                         .requestMatchers(HttpMethod.GET, "/api/projects", "/api/projects/{projectId}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/job-roles/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/stacks").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/projects/**").hasRole("VERIFIED")
                         .requestMatchers(HttpMethod.GET, "/api/posts", "/api/posts/{postId}").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/posts/{postId}/view").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/posts/{postId}/comments").permitAll()
                         .requestMatchers("/api/posts/**").hasRole("VERIFIED")
                         .requestMatchers("/api/comments/**").hasRole("VERIFIED")

@@ -50,12 +50,10 @@ public class CreateProjectRequestDTO {
     private String imageUrl;
 
     @NotNull
-    @Valid
     @Size(min = 1, max = 6, message = "모집 역할은 1개 이상 6개 이하로 등록할 수 있습니다.")
-    private List<CreateRecruitmentRequestDTO> recruitments;
+    private List<@Valid CreateRecruitmentRequestDTO> recruitments;
 
-    @Valid
     @Size(max = 10, message = "질문은 최대 10개까지 등록할 수 있습니다.")
-    private List<CreateQuestionRequestDTO> questions;
+    private List<@Valid CreateQuestionRequestDTO> questions;
 
 }

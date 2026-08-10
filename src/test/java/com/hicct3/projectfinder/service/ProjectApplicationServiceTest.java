@@ -35,6 +35,9 @@ import org.springframework.context.ApplicationEventPublisher;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -63,6 +66,8 @@ class ProjectApplicationServiceTest {
     private ApplicationAnswerRepository applicationAnswerRepository;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private Clock clock;
 
     @InjectMocks
     private ProjectApplicationService projectApplicationService;
@@ -76,6 +81,10 @@ class ProjectApplicationServiceTest {
         project = org.mockito.Mockito.mock(Project.class);
         recruitment = org.mockito.Mockito.mock(ProjectRecruitment.class);
         applicant = org.mockito.Mockito.mock(User.class);
+        org.mockito.Mockito.lenient()
+                .when(clock.instant()).thenReturn(Instant.parse("2026-08-10T00:00:00Z"));
+        org.mockito.Mockito.lenient()
+                .when(clock.getZone()).thenReturn(ZoneId.of("Asia/Seoul"));
     }
 
     @Test
@@ -113,6 +122,11 @@ class ProjectApplicationServiceTest {
                 .build();
 
         projectApplicationService.applyProject(2L, request);
+
+        ArgumentCaptor<ProjectApplication> applicationCaptor =
+                ArgumentCaptor.forClass(ProjectApplication.class);
+        verify(projectApplicationRepository).save(applicationCaptor.capture());
+        assertEquals(project, applicationCaptor.getValue().getProject());
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Iterable<ApplicationAnswer>> answersCaptor = ArgumentCaptor.forClass(Iterable.class);
@@ -230,6 +244,7 @@ class ProjectApplicationServiceTest {
         ProjectApplication application = ProjectApplication.builder()
                 .user(applicant)
                 .recruitment(recruitment)
+                .status(ApplicationStatus.PENDING)
                 .build();
         when(projectApplicationRepository.findById(20L)).thenReturn(Optional.of(application));
 
@@ -244,17 +259,66 @@ class ProjectApplicationServiceTest {
         verify(recruitment).setApplicantCount(0);
     }
 
+    @Test
+    void rejectsAnotherApplicationToTheSameProject() {
+        User author = org.mockito.Mockito.mock(User.class);
+        when(projectRecruitmentRepository.findById(10L)).thenReturn(Optional.of(recruitment));
+        when(recruitment.getProject()).thenReturn(project);
+        when(project.isRecruitmentClosed(clock)).thenReturn(false);
+        when(project.getAuthor()).thenReturn(author);
+        when(author.getUserId()).thenReturn(1L);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(applicant));
+        when(applicant.getUserId()).thenReturn(2L);
+        when(projectApplicationRepository.existsByUserAndProject(applicant, project))
+                .thenReturn(true);
+
+        GeneralException exception = assertThrows(
+                GeneralException.class,
+                () -> projectApplicationService.applyProject(
+                        2L,
+                        ApplyProjectRequestDTO.builder()
+                                .recruitmentId(10L)
+                                .letter("지원합니다.")
+                                .answers(List.of())
+                                .build())
+        );
+
+        assertEquals(ErrorCode.ALREADY_APPLIED, exception.getErrorCode());
+        verify(projectApplicationRepository, never()).save(any());
+    }
+
+    @Test
+    void rejectedApplicationCannotBeCanceledAndReapplied() {
+        when(applicant.getUserId()).thenReturn(2L);
+        ProjectApplication application = ProjectApplication.builder()
+                .user(applicant)
+                .recruitment(recruitment)
+                .status(ApplicationStatus.REJECTED)
+                .build();
+        when(projectApplicationRepository.findById(20L)).thenReturn(Optional.of(application));
+
+        GeneralException exception = assertThrows(
+                GeneralException.class,
+                () -> projectApplicationService.deleteApplication(
+                        2L,
+                        DeleteProjectRequestDTO.builder().applicationId(20L).build())
+        );
+
+        assertEquals(ErrorCode.APPLICATION_ALREADY_PROCESSED, exception.getErrorCode());
+        verify(projectApplicationRepository, never()).delete(any());
+    }
+
     private void stubApplyContext() {
         User author = org.mockito.Mockito.mock(User.class);
 
         when(projectRecruitmentRepository.findById(10L)).thenReturn(Optional.of(recruitment));
         when(recruitment.getProject()).thenReturn(project);
-        when(project.isRecruitmentClosed()).thenReturn(false);
+        when(project.isRecruitmentClosed(clock)).thenReturn(false);
         when(project.getAuthor()).thenReturn(author);
         when(author.getUserId()).thenReturn(1L);
         when(userRepository.findById(2L)).thenReturn(Optional.of(applicant));
         when(applicant.getUserId()).thenReturn(2L);
-        when(projectApplicationRepository.existsByUserAndRecruitment(applicant, recruitment))
+        when(projectApplicationRepository.existsByUserAndProject(applicant, project))
                 .thenReturn(false);
     }
 
@@ -265,11 +329,13 @@ class ProjectApplicationServiceTest {
         when(projectApplicationRepository.findById(20L)).thenReturn(Optional.of(application));
         when(application.getId()).thenReturn(20L);
         when(application.getRecruitment()).thenReturn(recruitment);
+        when(application.getProject()).thenReturn(project);
         when(application.getStatus()).thenReturn(ApplicationStatus.PENDING);
         when(application.getUser()).thenReturn(applicant);
         when(recruitment.getProject()).thenReturn(project);
         when(project.getAuthor()).thenReturn(author);
         when(project.getTitle()).thenReturn("테스트 프로젝트");
+        when(project.getStatus()).thenReturn(com.hicct3.projectfinder.entity.enums.ProjectStatus.RECRUITING);
         when(author.getUserId()).thenReturn(1L);
         when(applicant.getUserId()).thenReturn(2L);
 

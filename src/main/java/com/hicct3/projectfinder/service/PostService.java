@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.Clock;
 
 @Service
 @RequiredArgsConstructor
@@ -27,13 +28,14 @@ public class PostService {
     private final PostLikeRepository postLikeRepository;
     private final PostSaveRepository postSaveRepository;
     private final UserRepository userRepository;
+    private final Clock clock;
 
     @Transactional
     public Long createPost(Long userId, CreatePostRequestDTO req) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorCode.USER_NOT_FOUND));
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         Post post = Post.builder()
                 .title(req.getTitle())
                 .content(req.getContent())
@@ -56,13 +58,13 @@ public class PostService {
         if (req.getContent() != null && !req.getContent().isBlank()) {
             post.setContent(req.getContent());
         }
-        post.setUpdatedAt(LocalDateTime.now());
+        post.setUpdatedAt(LocalDateTime.now(clock));
     }
 
     @Transactional
     public void deletePost(Long userId, Long postId) {
         Post post = getOwnedPost(userId, postId);
-        post.setDeletedAt(LocalDateTime.now());
+        post.setDeletedAt(LocalDateTime.now(clock));
     }
 
     @Transactional
@@ -74,17 +76,17 @@ public class PostService {
         var existing = postLikeRepository.findByUser_UserIdAndPost_Id(userId, postId);
         if (existing.isPresent()) {
             postLikeRepository.delete(existing.get());
-            post.decreaseLikeCount();
+            postRepository.decreaseLikeCount(postId);
             return ToggleResultDTO.of(false);
         }
 
         PostLike like = PostLike.builder()
                 .user(user)
                 .post(post)
-                .createdAt(LocalDateTime.now())
+                .createdAt(LocalDateTime.now(clock))
                 .build();
         postLikeRepository.save(like);
-        post.increaseLikeCount();
+        postRepository.increaseLikeCount(postId);
         return ToggleResultDTO.of(true);
     }
 
@@ -103,7 +105,7 @@ public class PostService {
         PostSave save = PostSave.builder()
                 .user(user)
                 .post(post)
-                .createdAt(LocalDateTime.now())
+                .createdAt(LocalDateTime.now(clock))
                 .build();
         postSaveRepository.save(save);
         return ToggleResultDTO.of(true);

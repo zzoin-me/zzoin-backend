@@ -20,5 +20,7 @@ public class MyReviewableProjectResponseDTO {
     private String recruitment;
     private LocalDateTime joinedAt;
     private LocalDateTime completedAt;
+    private Long totalTargetCount;
+    private Long reviewedTargetCount;
     private Boolean reviewCompleted;
 }

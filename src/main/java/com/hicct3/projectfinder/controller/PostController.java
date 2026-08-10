@@ -1,6 +1,7 @@
 package com.hicct3.projectfinder.controller;
 
 import com.hicct3.projectfinder.dto.community.*;
+import com.hicct3.projectfinder.dto.common.PageResponseDTO;
 import com.hicct3.projectfinder.entity.enums.PostBoardType;
 import com.hicct3.projectfinder.entity.enums.PostSortType;
 import com.hicct3.projectfinder.global.ApiResponse;
@@ -10,7 +11,6 @@ import com.hicct3.projectfinder.service.PostService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -25,7 +25,7 @@ public class PostController {
 
     @Operation(summary = "게시글 목록 조회")
     @GetMapping
-    public ApiResponse<Page<PostPreviewResponseDTO>> getPosts(
+    public ApiResponse<PageResponseDTO<PostPreviewResponseDTO>> getPosts(
             @RequestParam(defaultValue = "ALL") String board,
             @RequestParam(defaultValue = "LATEST") String sort,
             @RequestParam(required = false) String keyword,
@@ -35,7 +35,8 @@ public class PostController {
         PostBoardType boardType = PostBoardType.from(board);
         PostSortType sortType = PostSortType.from(sort);
         Long currentUserId = extractUserId(authentication);
-        return ApiResponse.onSuccess(postQueryService.getPostList(boardType, sortType, keyword, currentUserId, pageable));
+        return ApiResponse.onSuccess(PageResponseDTO.from(
+                postQueryService.getPostList(boardType, sortType, keyword, currentUserId, pageable)));
     }
 
     @Operation(summary = "게시글 상세 조회")
@@ -48,15 +49,27 @@ public class PostController {
         return ApiResponse.onSuccess("게시글 상세 조회 성공했습니다.", postQueryService.getPostDetail(postId, currentUserId));
     }
 
+    @Operation(summary = "게시글 조회수 기록")
+    @PostMapping("/{postId}/view")
+    public ApiResponse<ViewCountResultDTO> recordPostView(
+            @PathVariable Long postId,
+            @RequestHeader(value = "X-Viewer-Id", required = false) String viewerId,
+            Authentication authentication
+    ) {
+        Long currentUserId = extractUserId(authentication);
+        return ApiResponse.onSuccess(
+                postQueryService.recordView(postId, currentUserId, viewerId));
+    }
+
     @Operation(summary = "게시글 생성")
     @PostMapping
-    public ApiResponse<Void> createPost(
+    public ApiResponse<Long> createPost(
             Authentication authentication,
             @Valid @RequestBody CreatePostRequestDTO req
     ) {
         Long userId = ((CustomUserDetails) authentication.getPrincipal()).getId();
-        postService.createPost(userId, req);
-        return ApiResponse.onSuccess("게시글 등록에 성공했습니다.", null);
+        Long postId = postService.createPost(userId, req);
+        return ApiResponse.onSuccess("게시글 등록에 성공했습니다.", postId);
     }
 
     @Operation(summary = "게시글 수정")

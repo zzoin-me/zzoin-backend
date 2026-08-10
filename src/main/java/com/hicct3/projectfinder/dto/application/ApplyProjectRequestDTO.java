@@ -22,8 +22,7 @@ public class ApplyProjectRequestDTO {
     @Size(min = 10, max = 500, message = "자기소개서는 10자 이상 500자 이하여야 합니다.")
     private String letter;
 
-    @Valid
     @Size(max = 10, message = "답변은 최대 10개까지 등록할 수 있습니다.")
-    private List<@NotNull AnswerRequestDTO> answers;
+    private List<@NotNull @Valid AnswerRequestDTO> answers;
 
 }

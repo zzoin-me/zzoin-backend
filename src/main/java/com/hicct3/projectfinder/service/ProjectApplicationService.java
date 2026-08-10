@@ -21,6 +21,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.Clock;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -36,6 +37,7 @@ public class ProjectApplicationService {
     private final ProjectQuestionRepository projectQuestionRepository;
     private final ApplicationAnswerRepository applicationAnswerRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final Clock clock;
 
     @Transactional
     public void updateApplicantStatus(Long userId, Long applicationId, UpdateApplicantStatusDTO dto)
@@ -47,14 +49,18 @@ public class ProjectApplicationService {
         if(application.getStatus() != ApplicationStatus.PENDING)
             throw new GeneralException(ErrorCode.APPLICATION_ALREADY_PROCESSED);
 
+        ProjectStatus projectStatus = application.getProject().getStatus();
+        if (projectStatus == ProjectStatus.IN_PROGRESS || projectStatus == ProjectStatus.COMPLETED)
+            throw new GeneralException(ErrorCode.APPLICATION_DECISION_CLOSED);
+
         if(dto.getStatus() == ApplicationStatus.APPROVED)
         {
             ProjectMember member = ProjectMember.builder()
-                    .status(MemberStatus.IN_PROGRESS)
-                    .joinedAt(LocalDateTime.now())
+                    .status(MemberStatus.ACTIVE)
+                    .joinedAt(LocalDateTime.now(clock))
                     .completedAt(null)
                     .user(application.getUser())
-                    .project(application.getRecruitment().getProject())
+                    .project(application.getProject())
                     .recruitment(application.getRecruitment())
                     .role(Role.MEMBER)
                     .build();
@@ -105,7 +111,7 @@ public class ProjectApplicationService {
     public void applyProject(Long userId, ApplyProjectRequestDTO req) {
        var recruitment = projectRecruitmentRepository.findById(req.getRecruitmentId()).orElseThrow(() -> new GeneralException(ErrorCode.RECRUITMENT_NOT_FOUND));
 
-       if(recruitment.getProject().isRecruitmentClosed())
+       if(recruitment.getProject().isRecruitmentClosed(clock))
            throw new GeneralException(ErrorCode.RECRUITMENT_CLOSED);
 
        var user = userRepository.findById(userId).orElseThrow(() -> new GeneralException(ErrorCode.USER_NOT_FOUND));
@@ -114,7 +120,7 @@ public class ProjectApplicationService {
            throw new GeneralException(ErrorCode.AUTHOR_NOT_APPLICABLE);
 
        //중복 지원 여부
-       if(projectApplicationRepository.existsByUserAndRecruitment(user, recruitment))
+       if(projectApplicationRepository.existsByUserAndProject(user, recruitment.getProject()))
            throw new GeneralException(ErrorCode.ALREADY_APPLIED);
 
        Map<ProjectQuestion, String> validatedAnswers = validateAnswers(
@@ -125,8 +131,9 @@ public class ProjectApplicationService {
        ProjectApplication application = ProjectApplication.builder()
                .user(user)
                .recruitment(recruitment)
+               .project(recruitment.getProject())
                .letter(req.getLetter())
-               .createdAt(LocalDateTime.now())
+               .createdAt(LocalDateTime.now(clock))
                .status(ApplicationStatus.PENDING)
                .build();
 
@@ -160,6 +167,9 @@ public class ProjectApplicationService {
 
        if(!application.getUser().getUserId().equals(userId))
            throw new GeneralException(ErrorCode.AUTHOR_MISMATCHED);
+
+       if (application.getStatus() != ApplicationStatus.PENDING)
+           throw new GeneralException(ErrorCode.APPLICATION_ALREADY_PROCESSED);
 
        application.getRecruitment().setApplicantCount(application.getRecruitment().getApplicantCount() - 1);
        applicationAnswerRepository.deleteAllByApplication(application);

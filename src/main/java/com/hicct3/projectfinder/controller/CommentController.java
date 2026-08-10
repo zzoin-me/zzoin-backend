@@ -1,6 +1,7 @@
 package com.hicct3.projectfinder.controller;
 
 import com.hicct3.projectfinder.dto.community.CommentResponseDTO;
+import com.hicct3.projectfinder.dto.community.CommentPageResponseDTO;
 import com.hicct3.projectfinder.dto.community.CreateCommentRequestDTO;
 import com.hicct3.projectfinder.dto.community.UpdateCommentRequestDTO;
 import com.hicct3.projectfinder.global.ApiResponse;
@@ -23,12 +24,15 @@ public class CommentController {
 
     @Operation(summary = "게시글 댓글 목록 조회")
     @GetMapping("/posts/{postId}/comments")
-    public ApiResponse<List<CommentResponseDTO>> getComments(
+    public ApiResponse<CommentPageResponseDTO> getComments(
             @PathVariable Long postId,
+            @RequestParam(required = false) Long afterId,
+            @RequestParam(defaultValue = "20") int size,
             Authentication authentication
     ) {
         Long currentUserId = extractUserId(authentication);
-        return ApiResponse.onSuccess(commentService.getComments(postId, currentUserId));
+        return ApiResponse.onSuccess(
+                commentService.getComments(postId, currentUserId, afterId, size));
     }
 
     @Operation(summary = "댓글 생성")

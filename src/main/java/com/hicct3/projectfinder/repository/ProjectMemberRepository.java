@@ -12,6 +12,9 @@ import java.util.Optional;
 
 public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Long> {
     List<ProjectMember> findAllByUser(User user);
+    List<ProjectMember> findAllByUserAndProject_StatusInOrderByProject_UpdatedAtDesc(
+            User user,
+            List<ProjectStatus> statuses);
     List<ProjectMember> findAllByUserAndProject(User user, Project project);
 
     boolean existsByUserAndProject(User user, Project project);

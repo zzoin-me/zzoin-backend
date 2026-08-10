@@ -60,6 +60,13 @@ public enum ErrorCode {
     PROJECT_NOT_COMPLETED(HttpStatus.BAD_REQUEST, "프로젝트가 완료되지 않았습니다."),
     PROJECT_ALREADY_COMPLETED(HttpStatus.BAD_REQUEST, "프로젝트가 이미 완료되었습니다."),
     PROJECT_MEMBER_NOT_FOUND(HttpStatus.BAD_REQUEST, "프로젝트 멤버를 찾을 수 없습니다."),
+    PROJECT_HAS_APPLICATIONS(HttpStatus.BAD_REQUEST, "지원 이력이 있는 프로젝트는 삭제할 수 없습니다."),
+    PROJECT_EDIT_CLOSED(HttpStatus.BAD_REQUEST, "모집이 마감된 프로젝트는 수정할 수 없습니다."),
+    INVALID_PROJECT_STATUS_TRANSITION(HttpStatus.BAD_REQUEST, "현재 단계에서는 요청한 프로젝트 상태로 변경할 수 없습니다."),
+    PENDING_APPLICATIONS_EXIST(HttpStatus.BAD_REQUEST, "대기 중인 지원자를 모두 승인하거나 거절한 후 프로젝트를 시작해주세요."),
+    PROJECT_CHAT_NOT_AVAILABLE(HttpStatus.BAD_REQUEST, "프로젝트가 시작된 후 대화방을 이용할 수 있습니다."),
+    PROJECT_CHAT_READ_ONLY(HttpStatus.BAD_REQUEST, "완료된 프로젝트의 대화방은 읽기만 가능합니다."),
+    INVALID_CHAT_MESSAGE(HttpStatus.BAD_REQUEST, "메시지는 1자 이상 1000자 이하로 입력해주세요."),
 
     // Recruitment
     RECRUITMENT_DUPLICATE(HttpStatus.BAD_REQUEST, "중복된 모집입니다."),
@@ -68,7 +75,7 @@ public enum ErrorCode {
     RECRUITMENT_EMPTY(HttpStatus.BAD_REQUEST, "모집 정보가 존재하지 않습니다."),
     INVALID_RECRUITMENT_ROLE(HttpStatus.BAD_REQUEST, "모집 직군이 카테고리와 일치하지 않습니다."),
     AUTHOR_NOT_APPLICABLE(HttpStatus.BAD_REQUEST, "작성자가 지원할 수 없습니다."),
-    ALREADY_APPLIED(HttpStatus.BAD_REQUEST, "이미 지원한 모집입니다."),
+    ALREADY_APPLIED(HttpStatus.BAD_REQUEST, "이미 지원한 프로젝트입니다."),
     APPLICATION_NOT_FOUND(HttpStatus.BAD_REQUEST, "지원서를 찾을 수 없습니다."),
 
     //Role
@@ -90,9 +97,11 @@ public enum ErrorCode {
     CANNOT_REVIEW_SELF(HttpStatus.BAD_REQUEST, "자기 자신에게 리뷰를 작성할 수 없습니다."),
     REVIEW_TARGET_INVALID(HttpStatus.BAD_REQUEST, "평가 대상이 유효하지 않습니다."),
     ALREADY_REVIEWED(HttpStatus.BAD_REQUEST, "이미 평가를 작성했습니다."),
+    REVIEW_NOT_FOUND(HttpStatus.BAD_REQUEST, "리뷰를 찾을 수 없습니다."),
 
     //Applications
     APPLICATION_ALREADY_PROCESSED(HttpStatus.BAD_REQUEST, "이미 처리된 지원입니다."),
+    APPLICATION_DECISION_CLOSED(HttpStatus.BAD_REQUEST, "진행 중이거나 완료된 프로젝트의 지원자는 처리할 수 없습니다."),
 
     // Questions
     QUESTION_NOT_FOUND(HttpStatus.BAD_REQUEST, "프로젝트에 존재하지 않는 질문입니다."),

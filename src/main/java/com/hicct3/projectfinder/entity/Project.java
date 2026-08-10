@@ -7,13 +7,17 @@ import com.hicct3.projectfinder.entity.enums.ProjectStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(
     name="projects",
     indexes = {
-        @Index(name = "idx_recruitment_deadline", columnList = "recruitment_deadline")
+        @Index(name = "idx_recruitment_deadline", columnList = "recruitment_deadline"),
+        @Index(
+                name = "idx_project_status_deadline",
+                columnList = "status, deleted_at, recruitment_deadline")
     }
 )
 @Getter
@@ -68,6 +72,7 @@ public class Project {
     @JoinColumn(name = "creator_id")
     private User author;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ProjectStatus status;
 
@@ -79,10 +84,17 @@ public class Project {
 
     public Boolean isRecruitmentClosed()
     {
-        return status != ProjectStatus.RECRUITING || recruitmentDeadline.isBefore(LocalDateTime.now());
+        return isRecruitmentClosed(Clock.systemDefaultZone());
     }
 
-    public static Project create(CreateProjectRequestDTO req, User user) {
+    public Boolean isRecruitmentClosed(Clock clock)
+    {
+        return deletedAt != null
+                || status != ProjectStatus.RECRUITING
+                || !recruitmentDeadline.isAfter(LocalDateTime.now(clock));
+    }
+
+    public static Project create(CreateProjectRequestDTO req, User user, Clock clock) {
         return Project.builder()
                 .title(req.getTitle())
                 .description(req.getDescription())
@@ -93,8 +105,8 @@ public class Project {
                 .recruitmentDeadline(req.getRecruitmentDeadline())
                 .goal(req.getGoalType())
                 .imageUrl(req.getImageUrl())
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
+                .createdAt(LocalDateTime.now(clock))
+                .updatedAt(LocalDateTime.now(clock))
                 .deletedAt(null)
                 .author(user)
                 .status(ProjectStatus.RECRUITING)

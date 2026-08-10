@@ -3,8 +3,6 @@ package com.hicct3.projectfinder.dto.project.review;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
-import java.util.List;
-
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
@@ -12,5 +10,23 @@ import java.util.List;
 @Setter
 public class CreateReviewRequestDTO {
     @NotNull
-    private List<CreateMemberReviewRequestDTO> members;
+    private Long targetUserId;
+
+    @NotNull
+    @Min(1)
+    @Max(5)
+    private Integer contribution;
+
+    @NotNull
+    @Min(1)
+    @Max(5)
+    private Integer participation;
+
+    @NotNull
+    @Min(1)
+    @Max(5)
+    private Integer responsibility;
+
+    @Size(max = 200)
+    private String comment;
 }

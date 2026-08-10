@@ -2,7 +2,6 @@ package com.hicct3.projectfinder.repository;
 
 import com.hicct3.projectfinder.entity.Project;
 import com.hicct3.projectfinder.entity.ProjectApplication;
-import com.hicct3.projectfinder.entity.ProjectRecruitment;
 import com.hicct3.projectfinder.entity.User;
 import com.hicct3.projectfinder.entity.enums.ApplicationStatus;
 import org.springframework.data.domain.Page;
@@ -12,14 +11,18 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 public interface ProjectApplicationRepository extends JpaRepository<ProjectApplication, Long> {
-    boolean existsByUserAndRecruitment(User user, ProjectRecruitment recruitment);
+    boolean existsByUserAndProject(User user, Project project);
+
+    boolean existsByProject(Project project);
+
+    boolean existsByProjectAndStatus(Project project, ApplicationStatus status);
 
     @Query("""
             select pa
             from ProjectApplication pa
             join fetch pa.user
-            join fetch pa.recruitment r
-            where r.project = :project
+            join fetch pa.recruitment
+            where pa.project = :project
             """)
     List<ProjectApplication> findAllByProject(Project project);
 

@@ -12,5 +12,6 @@ public class UpdatePostRequestDTO {
     @Size(max = 100)
     private String title;
 
+    @Size(max = 10000)
     private String content;
 }

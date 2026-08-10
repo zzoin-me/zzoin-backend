@@ -1,6 +1,5 @@
 package com.hicct3.projectfinder.entity;
 
-import com.hicct3.projectfinder.entity.enums.ApplicationStatus;
 import com.hicct3.projectfinder.entity.enums.MemberStatus;
 import com.hicct3.projectfinder.entity.enums.Role;
 import jakarta.persistence.*;
@@ -10,7 +9,13 @@ import org.springframework.data.annotation.CreatedDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name="projectMembers")
+@Table(
+        name="projectMembers",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_project_member_project_user",
+                columnNames = {"project_id", "user_id"}
+        )
+)
 @Getter
 @Setter
 @Builder
@@ -21,6 +26,7 @@ public class ProjectMember {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private MemberStatus status;
 
