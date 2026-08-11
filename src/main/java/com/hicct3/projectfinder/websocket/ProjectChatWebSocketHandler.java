@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.hicct3.projectfinder.dto.chat.ChatMessageEvent;
+import com.hicct3.projectfinder.global.ErrorCode;
 import com.hicct3.projectfinder.global.GeneralException;
 import com.hicct3.projectfinder.service.ProjectChatService;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ public class ProjectChatWebSocketHandler extends TextWebSocketHandler {
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
             .build();
     private final Map<Long, Set<WebSocketSession>> sessionsByProject = new ConcurrentHashMap<>();
+    private final Map<Long, Set<WebSocketSession>> sessionsByUser = new ConcurrentHashMap<>();
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -37,6 +39,14 @@ public class ProjectChatWebSocketHandler extends TextWebSocketHandler {
         Long projectId = attribute(session, ProjectChatHandshakeInterceptor.PROJECT_ID);
         try {
             projectChatService.assertCanRead(userId, projectId);
+            Set<WebSocketSession> userSessions = sessionsByUser.computeIfAbsent(
+                    userId, ignored -> ConcurrentHashMap.newKeySet());
+            synchronized (userSessions) {
+                if (userSessions.size() >= 3) {
+                    throw new GeneralException(ErrorCode.WEBSOCKET_CONNECTION_LIMIT);
+                }
+                userSessions.add(session);
+            }
             sessionsByProject.computeIfAbsent(projectId, ignored -> ConcurrentHashMap.newKeySet())
                     .add(session);
             send(session, Map.of("type", "CONNECTED"));
@@ -66,14 +76,26 @@ public class ProjectChatWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+        Long userId = attribute(session, ProjectChatHandshakeInterceptor.USER_ID);
         Long projectId = attribute(session, ProjectChatHandshakeInterceptor.PROJECT_ID);
-        Set<WebSocketSession> projectSessions = sessionsByProject.get(projectId);
-        if (projectSessions == null) {
+        removeSession(sessionsByUser, userId, session);
+        removeSession(sessionsByProject, projectId, session);
+    }
+
+    private void removeSession(
+            Map<Long, Set<WebSocketSession>> sessionsByKey,
+            Long key,
+            WebSocketSession session) {
+        if (key == null) {
             return;
         }
-        projectSessions.remove(session);
-        if (projectSessions.isEmpty()) {
-            sessionsByProject.remove(projectId);
+        Set<WebSocketSession> sessions = sessionsByKey.get(key);
+        if (sessions == null) {
+            return;
+        }
+        sessions.remove(session);
+        if (sessions.isEmpty()) {
+            sessionsByKey.remove(key, sessions);
         }
     }
 

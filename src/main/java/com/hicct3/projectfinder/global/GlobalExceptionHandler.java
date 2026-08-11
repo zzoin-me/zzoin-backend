@@ -1,7 +1,7 @@
 package com.hicct3.projectfinder.global;
 
 import org.springframework.context.support.DefaultMessageSourceResolvable;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -11,6 +11,15 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(RateLimitException.class)
+    public ResponseEntity<ApiResponse<String>> handleRateLimitException(RateLimitException e)
+    {
+        return ResponseEntity
+                .status(e.getErrorCode().getStatus())
+                .header(HttpHeaders.RETRY_AFTER, Long.toString(e.getRetryAfterSeconds()))
+                .body(ApiResponse.onError(e.getErrorCode(), e.getMessage()));
+    }
 
     @ExceptionHandler(GeneralException.class)
     public ResponseEntity<ApiResponse<String>> handleGeneralException(GeneralException e)

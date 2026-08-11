@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -42,6 +43,7 @@ public class ProjectChatService {
     private final ProjectChatMessageRepository messageRepository;
     private final ProjectChatReadRepository readRepository;
     private final Clock clock;
+    private final SecurityRateLimitService rateLimitService;
 
     @Transactional(readOnly = true)
     public void assertCanRead(Long userId, Long projectId) {
@@ -110,6 +112,8 @@ public class ProjectChatService {
 
     @Transactional
     public ChatMessageEvent sendMessage(Long userId, Long projectId, String rawContent) {
+        rateLimitService.consume(
+                "chat-message", userId + "|" + projectId, 5, Duration.ofSeconds(1));
         AccessContext context = getAccessContext(userId, projectId);
         ensureChatAvailable(context.project());
         if (context.project().getStatus() == ProjectStatus.COMPLETED) {

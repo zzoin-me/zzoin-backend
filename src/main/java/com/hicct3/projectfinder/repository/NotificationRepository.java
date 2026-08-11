@@ -11,6 +11,7 @@ import java.util.Optional;
 
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
     Page<Notification> findByUserOrderByCreatedAtDesc(User user, Pageable pageable);
+    Optional<Notification> findByIdAndUser_UserId(Long id, Long userId);
     long countByUserAndIsReadFalse(User user);
 
     Optional<Notification> findFirstByUserAndTypeAndRefIdAndCreatedAtAfter(

@@ -42,6 +42,7 @@ class ProjectChatServiceTest {
     @Mock private ProjectChatMessageRepository messageRepository;
     @Mock private ProjectChatReadRepository readRepository;
     @Mock private Clock clock;
+    @Mock private SecurityRateLimitService rateLimitService;
 
     @InjectMocks
     private ProjectChatService projectChatService;

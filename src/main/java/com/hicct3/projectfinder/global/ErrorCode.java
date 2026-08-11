@@ -12,6 +12,7 @@ public enum ErrorCode {
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다."),
     INVALID_REQUEST_BODY(HttpStatus.BAD_REQUEST, "요청 본문 형식이 올바르지 않습니다."),
     MISSING_HEADER(HttpStatus.BAD_REQUEST, "필수 헤더가 누락되었습니다."),
+    RATE_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "요청이 너무 많습니다. 잠시 후 다시 시도해주세요."),
 
     // Auth
     AUTHENTICATION_FAILED(HttpStatus.BAD_REQUEST, "이메일 또는 비밀번호가 일치하지 않습니다."),
@@ -22,6 +23,10 @@ public enum ErrorCode {
     SIGNUP_EMAIL_MISMATCH(HttpStatus.BAD_REQUEST, "회원가입 인증 이메일과 요청 이메일이 일치하지 않습니다."),
     INVALID_USER(HttpStatus.BAD_REQUEST, "유효하지 않은 사용자입니다."),
     USER_WITHDRAWN(HttpStatus.BAD_REQUEST, "탈퇴한 사용자입니다."),
+
+    // Notification
+    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "알림을 찾을 수 없습니다."),
+    DEVICE_TOKEN_NOT_FOUND(HttpStatus.NOT_FOUND, "디바이스 토큰을 찾을 수 없습니다."),
 
     // User
     USER_NOT_FOUND(HttpStatus.BAD_REQUEST, "사용자가 존재하지 않습니다."),
@@ -38,6 +43,7 @@ public enum ErrorCode {
     EMAIL_VERIFICATION_NOT_FOUND(HttpStatus.BAD_REQUEST, "이메일 인증 코드가 존재하지 않습니다."),
     EMAIL_CODE_MISMATCH(HttpStatus.BAD_REQUEST, "이메일 인증 코드가 일치하지 않습니다."),
     EMAIL_CODE_EXPIRED(HttpStatus.BAD_REQUEST, "이메일 인증 코드가 만료되었습니다."),
+    EMAIL_CODE_ATTEMPTS_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "인증번호 입력에 5회 실패하여 코드가 폐기되었습니다. 새 인증번호를 요청해주세요."),
     INVALID_EMAIL_FORMAT(HttpStatus.BAD_REQUEST, "올바르지 않은 이메일 형식입니다."),
     NOT_UNIVERSITY_EMAIL(HttpStatus.BAD_REQUEST, "대학 이메일이 아닙니다."),
     UNIVERSITY_NOT_FOUND(HttpStatus.BAD_REQUEST, "존재하지 않는 대학입니다."),
@@ -67,6 +73,7 @@ public enum ErrorCode {
     PROJECT_CHAT_NOT_AVAILABLE(HttpStatus.BAD_REQUEST, "프로젝트가 시작된 후 대화방을 이용할 수 있습니다."),
     PROJECT_CHAT_READ_ONLY(HttpStatus.BAD_REQUEST, "완료된 프로젝트의 대화방은 읽기만 가능합니다."),
     INVALID_CHAT_MESSAGE(HttpStatus.BAD_REQUEST, "메시지는 1자 이상 1000자 이하로 입력해주세요."),
+    WEBSOCKET_CONNECTION_LIMIT(HttpStatus.TOO_MANY_REQUESTS, "프로젝트 대화 연결 수가 너무 많습니다."),
 
     // Recruitment
     RECRUITMENT_DUPLICATE(HttpStatus.BAD_REQUEST, "중복된 모집입니다."),

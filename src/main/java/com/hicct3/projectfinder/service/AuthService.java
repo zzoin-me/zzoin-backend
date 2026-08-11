@@ -27,7 +27,6 @@ import org.springframework.stereotype.Service;
 import java.security.SecureRandom;
 
 import java.time.LocalDateTime;
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -42,6 +41,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JavaMailSender mailSender;
     private final AuthenticationManager authenticationManager;
+    private final EmailVerificationAttemptService emailVerificationAttemptService;
 
     @Value("${spring.mail.username}")
     private String fromEmail;
@@ -101,26 +101,12 @@ public class AuthService {
             throw new GeneralException(ErrorCode.USER_NOT_FOUND);
         }
 
-        var verification = emailVerificationRepository.findByEmailAndType(user.getEmail(), VerificationType.WITHDRAW)
-                .orElseThrow(() -> new GeneralException(ErrorCode.EMAIL_VERIFICATION_NOT_FOUND));
-
-        if (!verification.getCode().equals(req.getCode())) {
-            throw new GeneralException(ErrorCode.EMAIL_CODE_MISMATCH);
-        }
-
-        if (verification.getExpiredAt().isBefore(LocalDateTime.now())) {
-            throw new GeneralException(ErrorCode.EMAIL_CODE_EXPIRED);
-        }
-
-        if (verification.getUser() == null || !Objects.equals(verification.getUser().getUserId(), userId)) {
-            throw new GeneralException(ErrorCode.INVALID_USER);
-        }
+        emailVerificationAttemptService.verifyAndConsume(
+                user.getEmail(), VerificationType.WITHDRAW, req.getCode(), userId);
 
         String originalEmail = user.getEmail();
 
         refreshTokenRepository.deleteByUserId(userId);
-        emailVerificationRepository.delete(verification);
-
         user.withDraw();
 
         sendWithdrawCompletedEmail(originalEmail);
@@ -146,14 +132,15 @@ public class AuthService {
                 + "인증번호는 5분간 유효합니다.\n\n"
                 + "본인이 요청한 것이 아니라면 이 메일을 무시해주세요.");
 
+        String encodedCode = passwordEncoder.encode(code);
         emailVerificationRepository.findByEmailAndType(user.getEmail(), VerificationType.WITHDRAW)
                 .ifPresentOrElse(
-                        verification -> verification.update(code, user, LocalDateTime.now().plusMinutes(5)),
+                        verification -> verification.update(encodedCode, user, LocalDateTime.now().plusMinutes(5)),
                         () -> emailVerificationRepository.save(
                                 new EmailVerification(
                                         user.getEmail(),
                                         VerificationType.WITHDRAW,
-                                        code,
+                                        encodedCode,
                                         user,
                                         LocalDateTime.now().plusMinutes(5)
                                 )
@@ -236,15 +223,16 @@ public class AuthService {
         message.setSubject("회원가입 인증번호");
         message.setText("인증번호는 [" + code + "] 입니다.\n인증번호는 5분간 유효합니다.");
 
+        String encodedCode = passwordEncoder.encode(code);
         emailVerificationRepository.findByEmailAndType(lowerEmail, VerificationType.SIGNUP)
                 .ifPresentOrElse(
-                        verification -> verification.update(code, null, LocalDateTime.now().plusMinutes(5)),
+                        verification -> verification.update(encodedCode, null, LocalDateTime.now().plusMinutes(5)),
 
                         () -> emailVerificationRepository.save(
                                 new EmailVerification(
                                         lowerEmail,
                                         VerificationType.SIGNUP,
-                                        code,
+                                        encodedCode,
                                         null,
                                         LocalDateTime.now().plusMinutes(5)
                                 )
@@ -266,16 +254,8 @@ public class AuthService {
     public EmailVerifyResponseDTO verifySignupEmail(EmailVerifyRequestDTO req)
     {
         var lowerVerifyEmail = req.getVerifyEmail().trim().toLowerCase();
-        var verification = emailVerificationRepository.findByEmailAndType(lowerVerifyEmail, VerificationType.SIGNUP)
-                .orElseThrow(()-> new GeneralException(ErrorCode.EMAIL_VERIFICATION_NOT_FOUND));
-
-        if(!verification.getCode().equals(req.getCode()))
-            throw new GeneralException(ErrorCode.EMAIL_CODE_MISMATCH);
-
-        if(verification.getExpiredAt().isBefore(LocalDateTime.now()))
-            throw new GeneralException(ErrorCode.EMAIL_CODE_EXPIRED);
-
-        emailVerificationRepository.delete(verification);
+        emailVerificationAttemptService.verifyAndConsume(
+                lowerVerifyEmail, VerificationType.SIGNUP, req.getCode(), null);
 
         return EmailVerifyResponseDTO.builder()
                 .token(jwtProvider.createSignupToken(lowerVerifyEmail))
@@ -356,11 +336,12 @@ public class AuthService {
 
 
         //인증코드 이미 있으면 업데이트
+        String encodedCode = passwordEncoder.encode(code);
         emailVerificationRepository.findByEmailAndType(lowerEmail, VerificationType.UNIVERSITY)
                 .ifPresentOrElse(
-                        verification -> verification.update(code, user, LocalDateTime.now().plusMinutes(5)),
+                        verification -> verification.update(encodedCode, user, LocalDateTime.now().plusMinutes(5)),
 
-                        () -> emailVerificationRepository.save(new EmailVerification(lowerEmail, VerificationType.UNIVERSITY, code, user, LocalDateTime.now().plusMinutes(5)))
+                        () -> emailVerificationRepository.save(new EmailVerification(lowerEmail, VerificationType.UNIVERSITY, encodedCode, user, LocalDateTime.now().plusMinutes(5)))
                 );
 
         //메일 전송
@@ -380,17 +361,8 @@ public class AuthService {
     public void verifyEmail(Long userId, UnivEmailVerifyRequestDTO req)
     {
         var lowerVerifyEmail = req.getVerifyEmail().trim().toLowerCase();
-        var verification = emailVerificationRepository.findByEmailAndType(lowerVerifyEmail, VerificationType.UNIVERSITY)
-                .orElseThrow(()-> new GeneralException(ErrorCode.EMAIL_VERIFICATION_NOT_FOUND));
-
-        if(!verification.getCode().equals(req.getCode()))
-            throw new GeneralException(ErrorCode.EMAIL_CODE_MISMATCH);
-
-        if(verification.getExpiredAt().isBefore(LocalDateTime.now()))
-            throw new GeneralException(ErrorCode.EMAIL_CODE_EXPIRED);
-
-        if(!Objects.equals(verification.getUser().getUserId(), userId))
-            throw new GeneralException(ErrorCode.INVALID_USER);
+        emailVerificationAttemptService.verifyAndConsume(
+                lowerVerifyEmail, VerificationType.UNIVERSITY, req.getCode(), userId);
 
         var user = userRepository.findById(userId).orElseThrow(()-> new GeneralException(ErrorCode.USER_NOT_FOUND));
 
@@ -403,7 +375,6 @@ public class AuthService {
             throw new GeneralException(ErrorCode.NOT_UNIVERSITY_EMAIL);
         user.setSchoolDomain(schoolDomainOpt.get());
 
-        emailVerificationRepository.delete(verification);
     }
 
     private String getDomain(String email) {

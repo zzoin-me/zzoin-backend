@@ -24,7 +24,7 @@ public class ProjectApplication {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 500)
     private String letter;
 
     @Enumerated(EnumType.STRING)

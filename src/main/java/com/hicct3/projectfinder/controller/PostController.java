@@ -15,7 +15,9 @@ import com.hicct3.projectfinder.global.CustomUserDetails;
 import com.hicct3.projectfinder.service.PostQueryService;
 import com.hicct3.projectfinder.service.PostService;
 import com.hicct3.projectfinder.service.R2ImageStorageService;
+import com.hicct3.projectfinder.service.SecurityRateLimitService;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +36,7 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Duration;
 import java.util.List;
 
 @RestController
@@ -44,6 +47,7 @@ public class PostController {
     private final PostService postService;
     private final PostQueryService postQueryService;
     private final R2ImageStorageService r2ImageStorageService;
+    private final SecurityRateLimitService rateLimitService;
 
     @Operation(summary = "게시글 목록 조회")
     @GetMapping
@@ -74,10 +78,13 @@ public class PostController {
     @Operation(summary = "게시글 조회수 기록")
     @PostMapping("/{postId}/view")
     public ApiResponse<ViewCountResultDTO> recordPostView(
+            HttpServletRequest request,
             @PathVariable Long postId,
             @RequestHeader(value = "X-Viewer-Id", required = false) String viewerId,
             Authentication authentication
     ) {
+        rateLimitService.consume(
+                "post-view", clientIp(request), 120, Duration.ofMinutes(1));
         Long currentUserId = extractUserId(authentication);
         return ApiResponse.onSuccess(
                 postQueryService.recordView(postId, currentUserId, viewerId));
@@ -153,5 +160,10 @@ public class PostController {
             return null;
         }
         return ((CustomUserDetails) authentication.getPrincipal()).getId();
+    }
+
+    private String clientIp(HttpServletRequest request) {
+        String remoteAddress = request.getRemoteAddr();
+        return remoteAddress == null || remoteAddress.isBlank() ? "unknown" : remoteAddress;
     }
 }

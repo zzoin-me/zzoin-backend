@@ -38,17 +38,26 @@ public class EmailVerification {
     @Column(nullable = false)
     private LocalDateTime expiredAt;
 
+    @Column(name = "failed_attempts", nullable = false)
+    private int failedAttempts;
+
     public EmailVerification(String email, VerificationType type, String code, User user, LocalDateTime expiredAt) {
         this.email = email;
         this.type = type;
         this.code = code;
         this.user = user;
         this.expiredAt = expiredAt;
+        this.failedAttempts = 0;
     }
 
     public void update(String code, User user, LocalDateTime expiredAt) {
         this.code = code;
         this.user = user;
         this.expiredAt = expiredAt;
+        this.failedAttempts = 0;
+    }
+
+    public int registerFailure() {
+        return ++failedAttempts;
     }
 }
