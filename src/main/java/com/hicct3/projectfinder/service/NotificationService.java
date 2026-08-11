@@ -92,9 +92,9 @@ public class NotificationService {
     }
 
     @Transactional
-    public void markAsRead(Long notificationId) {
-        Notification n = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new GeneralException(ErrorCode.COMMON_BAD_REQUEST));
+    public void markAsRead(Long userId, Long notificationId) {
+        Notification n = notificationRepository.findByIdAndUser_UserId(notificationId, userId)
+                .orElseThrow(() -> new GeneralException(ErrorCode.NOTIFICATION_NOT_FOUND));
         n.setIsRead(true);
     }
 
@@ -190,8 +190,11 @@ public class NotificationService {
     }
 
     @Transactional
-    public void unregisterDeviceToken(String token) {
-        deviceTokenRepository.deleteByToken(token);
+    public void unregisterDeviceToken(Long userId, String token) {
+        long deletedCount = deviceTokenRepository.deleteByTokenAndUser_UserId(token, userId);
+        if (deletedCount == 0) {
+            throw new GeneralException(ErrorCode.DEVICE_TOKEN_NOT_FOUND);
+        }
     }
 
     public boolean isAlreadyNotified(User user, NotificationType type, Long refId) {

@@ -1,5 +1,7 @@
 package com.hicct3.projectfinder.service;
 
+import com.hicct3.projectfinder.global.ErrorCode;
+import com.hicct3.projectfinder.global.GeneralException;
 import com.hicct3.projectfinder.entity.Notification;
 import com.hicct3.projectfinder.entity.User;
 import com.hicct3.projectfinder.entity.enums.NotificationType;
@@ -22,6 +24,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -93,5 +96,53 @@ class NotificationServiceTest {
                 (Map<Long, Set<SseEmitter>>) emittersField.get(notificationService);
 
         assertEquals(2, emitters.get(1L).size());
+    }
+
+    @Test
+    void marksOnlyOwnedNotificationAsRead() {
+        Notification notification = Notification.builder().id(10L).isRead(false).build();
+        when(notificationRepository.findByIdAndUser_UserId(10L, 1L))
+                .thenReturn(Optional.of(notification));
+
+        notificationService.markAsRead(1L, 10L);
+
+        assertEquals(true, notification.getIsRead());
+        verify(notificationRepository).findByIdAndUser_UserId(10L, 1L);
+    }
+
+    @Test
+    void rejectsNotificationOwnedByAnotherUser() {
+        when(notificationRepository.findByIdAndUser_UserId(10L, 1L))
+                .thenReturn(Optional.empty());
+
+        GeneralException exception = assertThrows(
+                GeneralException.class,
+                () -> notificationService.markAsRead(1L, 10L)
+        );
+
+        assertEquals(ErrorCode.NOTIFICATION_NOT_FOUND, exception.getErrorCode());
+    }
+
+    @Test
+    void unregistersOnlyOwnedDeviceToken() {
+        when(deviceTokenRepository.deleteByTokenAndUser_UserId("device-token", 1L))
+                .thenReturn(1L);
+
+        notificationService.unregisterDeviceToken(1L, "device-token");
+
+        verify(deviceTokenRepository).deleteByTokenAndUser_UserId("device-token", 1L);
+    }
+
+    @Test
+    void rejectsDeviceTokenOwnedByAnotherUser() {
+        when(deviceTokenRepository.deleteByTokenAndUser_UserId("device-token", 1L))
+                .thenReturn(0L);
+
+        GeneralException exception = assertThrows(
+                GeneralException.class,
+                () -> notificationService.unregisterDeviceToken(1L, "device-token")
+        );
+
+        assertEquals(ErrorCode.DEVICE_TOKEN_NOT_FOUND, exception.getErrorCode());
     }
 }

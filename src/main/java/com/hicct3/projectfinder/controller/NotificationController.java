@@ -77,8 +77,9 @@ public class NotificationController {
 
     @Operation(summary = "개별 알림 읽음 처리")
     @PatchMapping("/{id}/read")
-    public ApiResponse<Void> markAsRead(@PathVariable Long id) {
-        notificationService.markAsRead(id);
+    public ApiResponse<Void> markAsRead(Authentication authentication, @PathVariable Long id) {
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        notificationService.markAsRead(userDetails.getId(), id);
         return ApiResponse.onSuccess(null);
     }
 
@@ -105,8 +106,11 @@ public class NotificationController {
 
     @Operation(summary = "FCM 디바이스 토큰 해제")
     @DeleteMapping("/device")
-    public ApiResponse<Void> unregisterDevice(@RequestBody Map<String, String> body) {
-        notificationService.unregisterDeviceToken(body.get("token"));
+    public ApiResponse<Void> unregisterDevice(
+            Authentication authentication,
+            @RequestBody Map<String, String> body) {
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        notificationService.unregisterDeviceToken(userDetails.getId(), body.get("token"));
         return ApiResponse.onSuccess(null);
     }
 }

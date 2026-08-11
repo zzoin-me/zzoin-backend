@@ -23,6 +23,10 @@ public enum ErrorCode {
     INVALID_USER(HttpStatus.BAD_REQUEST, "유효하지 않은 사용자입니다."),
     USER_WITHDRAWN(HttpStatus.BAD_REQUEST, "탈퇴한 사용자입니다."),
 
+    // Notification
+    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "알림을 찾을 수 없습니다."),
+    DEVICE_TOKEN_NOT_FOUND(HttpStatus.NOT_FOUND, "디바이스 토큰을 찾을 수 없습니다."),
+
     // User
     USER_NOT_FOUND(HttpStatus.BAD_REQUEST, "사용자가 존재하지 않습니다."),
     DUPLICATE_NICKNAME(HttpStatus.BAD_REQUEST, "이미 사용 중인 닉네임입니다."),
