@@ -4,6 +4,7 @@ import com.hicct3.projectfinder.entity.Post;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -14,6 +15,7 @@ public class PostPreviewResponseDTO {
     private Long id;
     private String title;
     private String contentPreview;
+    private List<String> imageUrls;
     private AuthorDTO author;
     private LocalDateTime createdAt;
     private Integer likeCount;
@@ -31,6 +33,7 @@ public class PostPreviewResponseDTO {
                 .id(post.getId())
                 .title(post.getTitle())
                 .contentPreview(preview)
+                .imageUrls(post.getImageUrls())
                 .author(AuthorDTO.from(post.getAuthor()))
                 .createdAt(post.getCreatedAt())
                 .likeCount(likeCount)

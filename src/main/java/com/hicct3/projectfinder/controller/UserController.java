@@ -17,8 +17,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RequiredArgsConstructor
 @RestController
@@ -154,6 +156,21 @@ public class UserController {
                 (CustomUserDetails) authentication.getPrincipal();
         userService.updateProfile(userDetails.getId(), request);
         return ApiResponse.onSuccess(null);
+    }
+
+    @Operation(summary = "프로필 이미지 업로드 및 수정")
+    @PatchMapping(value = "/me/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<ProfileImageUploadResponseDTO> updateProfileImage(
+            Authentication authentication,
+            @RequestPart("image") MultipartFile image
+    ) {
+        CustomUserDetails userDetails =
+                (CustomUserDetails) authentication.getPrincipal();
+        String profileUrl = userService.updateProfileImage(userDetails.getId(), image);
+        return ApiResponse.onSuccess(
+                "프로필 이미지가 수정되었습니다.",
+                ProfileImageUploadResponseDTO.of(profileUrl)
+        );
     }
 
     @Operation(summary = "내 학교 프로필 수정")

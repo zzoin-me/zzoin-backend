@@ -4,6 +4,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Getter
 @Setter
 @Builder
@@ -17,4 +20,8 @@ public class CreatePostRequestDTO {
     @NotBlank
     @Size(max = 10000)
     private String content;
+
+    @Builder.Default
+    @Size(max = 10)
+    private List<@Size(max = 2048) String> imageUrls = new ArrayList<>();
 }

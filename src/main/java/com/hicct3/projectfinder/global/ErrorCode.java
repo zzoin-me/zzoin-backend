@@ -93,6 +93,11 @@ public enum ErrorCode {
     COMMENT_DEPTH_EXCEEDED(HttpStatus.BAD_REQUEST, "대댓글은 한 단계까지만 작성할 수 있습니다."),
     NOT_COMMENT_AUTHOR(HttpStatus.BAD_REQUEST, "댓글 작성자가 일치하지 않습니다."),
 
+    FILE_EMPTY(HttpStatus.BAD_REQUEST, "No image file was provided."),
+    INVALID_FILE_TYPE(HttpStatus.BAD_REQUEST, "Only image files can be uploaded."),
+    FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "Image size or image count limit exceeded."),
+    FILE_UPLOAD_FAILED(HttpStatus.BAD_REQUEST, "Image upload failed."),
+
     // Reviews
     CANNOT_REVIEW_SELF(HttpStatus.BAD_REQUEST, "자기 자신에게 리뷰를 작성할 수 없습니다."),
     REVIEW_TARGET_INVALID(HttpStatus.BAD_REQUEST, "평가 대상이 유효하지 않습니다."),
