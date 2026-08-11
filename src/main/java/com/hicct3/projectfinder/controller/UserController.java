@@ -173,6 +173,18 @@ public class UserController {
         );
     }
 
+    @Operation(summary = "사용자 지정 프로필 이미지 삭제")
+    @DeleteMapping("/me/profile-image")
+    public ApiResponse<ProfileImageUploadResponseDTO> deleteProfileImage(Authentication authentication) {
+        CustomUserDetails userDetails =
+                (CustomUserDetails) authentication.getPrincipal();
+        String profileUrl = userService.deleteProfileImage(userDetails.getId());
+        return ApiResponse.onSuccess(
+                "프로필 이미지가 기본 이미지로 변경되었습니다.",
+                ProfileImageUploadResponseDTO.of(profileUrl)
+        );
+    }
+
     @Operation(summary = "내 학교 프로필 수정")
     @PatchMapping("/me/school-profile")
     public ApiResponse<Void> updateSchoolProfile(Authentication authentication,

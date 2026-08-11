@@ -59,6 +59,9 @@ public class User {
     private String profileUrl;
 
     @Column
+    private String socialProfileUrl;
+
+    @Column
     private LocalDateTime nicknameChangedAt;
 
     @Column
@@ -104,6 +107,7 @@ public class User {
         this.field = null;
         this.bio = null;
         this.profileUrl = null;
+        this.socialProfileUrl = null;
         this.schoolDomain = null;
 
         this.stacks.clear();
@@ -131,5 +135,10 @@ public class User {
         } else {
             this.field = String.join(",", fields.stream().map(String::trim).filter(s -> !s.isEmpty()).toList());
         }
+    }
+
+    @Transient
+    public boolean hasCustomProfileImage() {
+        return profileUrl != null && !profileUrl.equals(socialProfileUrl);
     }
 }

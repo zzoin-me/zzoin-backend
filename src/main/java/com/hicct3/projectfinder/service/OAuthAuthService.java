@@ -42,6 +42,7 @@ public class OAuthAuthService {
             if (user.isDeleted()) {
                 throw new GeneralException(ErrorCode.USER_WITHDRAWN);
             }
+            updateSocialProfile(user, attrs.getProfileImageUrl());
             return buildTokenResponse(user, SocialLoginResult.LOGIN);
         }
 
@@ -65,11 +66,17 @@ public class OAuthAuthService {
                 if (Boolean.TRUE.equals(attrs.getEmailVerified()) && Boolean.TRUE.equals(existing.getVerified())) {
                     existing.setProvider(attrs.getProvider());
                     existing.setProviderId(attrs.getProviderId());
+                    updateSocialProfile(existing, attrs.getProfileImageUrl());
                     return buildTokenResponse(existing, SocialLoginResult.LOGIN);
                 }
 
                 if (Boolean.TRUE.equals(attrs.getEmailVerified())) {
-                    String linkToken = jwtProvider.createSignupToken(lowerEmail);
+                    String linkToken = jwtProvider.createSocialLinkToken(
+                            lowerEmail,
+                            attrs.getProvider(),
+                            attrs.getProviderId(),
+                            attrs.getProfileImageUrl()
+                    );
                     return Map.of(
                             "result", SocialLoginResult.NEED_LINK,
                             "tempToken", linkToken,
@@ -80,7 +87,12 @@ public class OAuthAuthService {
 
                 return Map.of(
                         "result", SocialLoginResult.NEED_LINK,
-                        "tempToken", jwtProvider.createSignupToken(lowerEmail),
+                        "tempToken", jwtProvider.createSocialLinkToken(
+                                lowerEmail,
+                                attrs.getProvider(),
+                                attrs.getProviderId(),
+                                attrs.getProfileImageUrl()
+                        ),
                         "provider", attrs.getProvider(),
                         "providerId", attrs.getProviderId()
                 );
@@ -92,8 +104,9 @@ public class OAuthAuthService {
     }
 
     @Transactional
-    public Map<String, Object> linkAccount(String tempToken, String password, String provider, String providerId) {
-        String email = jwtProvider.verifySignupTokenAndGetEmail(tempToken).trim().toLowerCase();
+    public Map<String, Object> linkAccount(String tempToken, String password) {
+        JwtProvider.SocialLinkClaims linkClaims = jwtProvider.verifySocialLinkToken(tempToken);
+        String email = linkClaims.email().trim().toLowerCase();
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new GeneralException(ErrorCode.USER_NOT_FOUND));
 
@@ -105,8 +118,9 @@ public class OAuthAuthService {
             throw new GeneralException(ErrorCode.AUTHENTICATION_FAILED);
         }
 
-        user.setProvider(provider);
-        user.setProviderId(providerId);
+        user.setProvider(linkClaims.provider());
+        user.setProviderId(linkClaims.providerId());
+        updateSocialProfile(user, linkClaims.profileImageUrl());
 
         return buildTokenResponse(user, SocialLoginResult.LOGIN);
     }
@@ -115,6 +129,7 @@ public class OAuthAuthService {
         String lowerEmail = attrs.getEmail() != null ? attrs.getEmail().trim().toLowerCase() : "";
         String nickname = generateUniqueNickname(attrs);
 
+        String socialProfileUrl = normalizeProfileImageUrl(attrs.getProfileImageUrl());
         User user = User.builder()
                 .nickName(nickname)
                 .email(lowerEmail.isBlank() ? (attrs.getProvider() + "_" + attrs.getProviderId() + "@social.local") : lowerEmail)
@@ -123,11 +138,27 @@ public class OAuthAuthService {
                 .admin(false)
                 .provider(attrs.getProvider())
                 .providerId(attrs.getProviderId())
-                .profileUrl(attrs.getProfileImageUrl() != null && !attrs.getProfileImageUrl().isBlank() ? attrs.getProfileImageUrl() : null)
+                .profileUrl(socialProfileUrl)
+                .socialProfileUrl(socialProfileUrl)
                 .nicknameChangedAt(java.time.LocalDateTime.now())
                 .build();
 
         return userRepository.save(user);
+    }
+
+    private void updateSocialProfile(User user, String profileImageUrl) {
+        String nextSocialProfileUrl = normalizeProfileImageUrl(profileImageUrl);
+        String previousSocialProfileUrl = user.getSocialProfileUrl();
+        boolean usingSocialProfile = user.getProfileUrl() == null
+                || user.getProfileUrl().equals(previousSocialProfileUrl);
+        user.setSocialProfileUrl(nextSocialProfileUrl);
+        if (usingSocialProfile) {
+            user.setProfileUrl(nextSocialProfileUrl);
+        }
+    }
+
+    private String normalizeProfileImageUrl(String profileImageUrl) {
+        return profileImageUrl == null || profileImageUrl.isBlank() ? null : profileImageUrl;
     }
 
     private String generateUniqueNickname(OAuth2Attributes attrs) {

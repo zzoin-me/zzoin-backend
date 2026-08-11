@@ -37,6 +37,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 .email((String) oAuth2User.getAttribute("_email"))
                 .emailVerified((Boolean) oAuth2User.getAttribute("_emailVerified"))
                 .name((String) oAuth2User.getAttribute("_name"))
+                .profileImageUrl((String) oAuth2User.getAttribute("_profileImageUrl"))
                 .build();
 
         Map<String, Object> result = oAuthAuthService.processSocialLogin(attrs);

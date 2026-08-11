@@ -19,6 +19,8 @@ public class MyProfileResponseDTO {
     private List<String> fields;
     private String bio;
     private String profileUrl;
+    private String socialProfileUrl;
+    private Boolean customProfileImage;
     private Boolean verified;
     private String verifiedEmail;
     private LocalDateTime nicknameChangeableAt;

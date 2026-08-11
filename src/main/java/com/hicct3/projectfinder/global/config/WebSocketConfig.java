@@ -25,7 +25,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
                         "capacitor://localhost",
                         "http://localhost",
                         "https://localhost",
-                        "http://localhost:5173",
-                        "https://zzoin.vercel.app");
+                        "http://localhost:5173");
     }
 }

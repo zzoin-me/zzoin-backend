@@ -32,6 +32,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         enrichedAttributes.put("_email", attributes.getEmail());
         enrichedAttributes.put("_emailVerified", attributes.getEmailVerified());
         enrichedAttributes.put("_name", attributes.getName());
+        enrichedAttributes.put("_profileImageUrl", attributes.getProfileImageUrl());
 
         return new DefaultOAuth2User(
                 Collections.singleton(new SimpleGrantedAuthority("ROLE_USER")),

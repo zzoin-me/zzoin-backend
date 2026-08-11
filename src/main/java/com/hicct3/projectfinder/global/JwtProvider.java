@@ -37,6 +37,22 @@ public class JwtProvider {
         return buildToken(email, "SIGNUP", SIGNUP_TOKEN_VALIDITY);
     }
 
+    public String createSocialLinkToken(String email, String provider, String providerId, String profileImageUrl) {
+        Date now = new Date();
+        Date expiration = new Date(now.getTime() + SIGNUP_TOKEN_VALIDITY);
+
+        return Jwts.builder()
+                .subject(email)
+                .claim("token_type", "SOCIAL_LINK")
+                .claim("provider", provider)
+                .claim("provider_id", providerId)
+                .claim("profile_image_url", profileImageUrl == null ? "" : profileImageUrl)
+                .issuedAt(now)
+                .expiration(expiration)
+                .signWith(key)
+                .compact();
+    }
+
 
     public Long verifyAccessTokenAndGetUserId(String token) {
         Claims claims = getClaims(token);
@@ -66,6 +82,29 @@ public class JwtProvider {
         }
 
         return claims.getSubject();
+    }
+
+    public SocialLinkClaims verifySocialLinkToken(String token) {
+        Claims claims = getClaims(token);
+
+        if (!"SOCIAL_LINK".equals(claims.get("token_type"))) {
+            throw new GeneralException(ErrorCode.INVALID_TOKEN);
+        }
+
+        return new SocialLinkClaims(
+                claims.getSubject(),
+                claims.get("provider", String.class),
+                claims.get("provider_id", String.class),
+                claims.get("profile_image_url", String.class)
+        );
+    }
+
+    public record SocialLinkClaims(
+            String email,
+            String provider,
+            String providerId,
+            String profileImageUrl
+    ) {
     }
 
 

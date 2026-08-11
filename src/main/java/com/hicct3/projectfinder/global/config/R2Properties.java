@@ -18,7 +18,7 @@ public class R2Properties {
     private String secretAccessKey;
     private String bucketName;
     private String publicBaseUrl;
-    private String objectPrefix = "posts";
+    private String objectPrefix = "images";
     private long maxImageSizeBytes = 5 * 1024 * 1024;
     private int maxImagesPerRequest = 10;
     private List<String> allowedImageContentTypes = List.of(

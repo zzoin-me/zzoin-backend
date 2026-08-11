@@ -26,9 +26,7 @@ public class AuthController {
     public ApiResponse<LoginResponseDTO> linkAccount(@RequestBody @Valid LinkAccountRequestDTO req) {
         Map<String, Object> result = oAuthAuthService.linkAccount(
                 req.getTempToken(),
-                req.getPassword(),
-                req.getProvider(),
-                req.getProviderId()
+                req.getPassword()
         );
         LoginResponseDTO dto = LoginResponseDTO.builder()
                 .accessToken((String) result.get("accessToken"))

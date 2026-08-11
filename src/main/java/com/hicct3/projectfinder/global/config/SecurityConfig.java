@@ -64,8 +64,7 @@ public class SecurityConfig {
                             "capacitor://localhost",
                             "http://localhost",
                             "https://localhost",
-                            "http://localhost:5173",
-                            "https://zzoin.vercel.app"
+                            "http://localhost:5173"
                     ));
                     config.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
                     config.setAllowedHeaders(java.util.List.of("*"));

@@ -50,6 +50,8 @@ public class UserService {
                 .fields(user.getFields())
                 .bio(user.getBio())
                 .profileUrl(user.getProfileUrl())
+                .socialProfileUrl(user.getSocialProfileUrl())
+                .customProfileImage(user.hasCustomProfileImage())
                 .verified(user.getVerified())
                 .verifiedEmail(user.getVerifiedEmail())
                 .nicknameChangeableAt(
@@ -118,17 +120,25 @@ public class UserService {
         if(req.getFields() != null)
             user.setFields(req.getFields());
 
-        if(req.getProfileUrl() != null)
-            user.setProfileUrl(req.getProfileUrl());
-
     }
 
     @Transactional
     public String updateProfileImage(Long userId, MultipartFile image) {
         var user = userRepository.findById(userId).orElseThrow(()->new GeneralException(ErrorCode.USER_NOT_FOUND));
+        String previousProfileUrl = user.hasCustomProfileImage() ? user.getProfileUrl() : null;
         String profileUrl = r2ImageStorageService.uploadProfileImage(userId, image);
         user.setProfileUrl(profileUrl);
+        r2ImageStorageService.deleteManagedImages(previousProfileUrl == null ? java.util.List.of() : java.util.List.of(previousProfileUrl));
         return profileUrl;
+    }
+
+    @Transactional
+    public String deleteProfileImage(Long userId) {
+        var user = userRepository.findById(userId).orElseThrow(()->new GeneralException(ErrorCode.USER_NOT_FOUND));
+        String previousProfileUrl = user.hasCustomProfileImage() ? user.getProfileUrl() : null;
+        user.setProfileUrl(user.getSocialProfileUrl());
+        r2ImageStorageService.deleteManagedImages(previousProfileUrl == null ? java.util.List.of() : java.util.List.of(previousProfileUrl));
+        return user.getProfileUrl();
     }
 
     @Transactional

@@ -17,9 +17,11 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.time.LocalDateTime;
 import java.time.Clock;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -29,12 +31,14 @@ public class PostService {
     private final PostLikeRepository postLikeRepository;
     private final PostSaveRepository postSaveRepository;
     private final UserRepository userRepository;
+    private final R2ImageStorageService r2ImageStorageService;
     private final Clock clock;
 
     @Transactional
     public Long createPost(Long userId, CreatePostRequestDTO req) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorCode.USER_NOT_FOUND));
+        r2ImageStorageService.validatePostImageUrls(userId, req.getImageUrls());
 
         LocalDateTime now = LocalDateTime.now(clock);
         Post post = Post.builder()
@@ -61,7 +65,13 @@ public class PostService {
             post.setContent(req.getContent());
         }
         if (req.getImageUrls() != null) {
-            post.setImageUrls(req.getImageUrls());
+            r2ImageStorageService.validatePostImageUrls(userId, req.getImageUrls());
+            var nextImageUrls = new HashSet<>(req.getImageUrls());
+            List<String> removedImageUrls = post.getImageUrls().stream()
+                    .filter(url -> !nextImageUrls.contains(url))
+                    .toList();
+            post.setImageUrls(new ArrayList<>(req.getImageUrls()));
+            r2ImageStorageService.deleteManagedImages(removedImageUrls);
         }
         post.setUpdatedAt(LocalDateTime.now(clock));
     }
@@ -70,6 +80,8 @@ public class PostService {
     public void deletePost(Long userId, Long postId) {
         Post post = getOwnedPost(userId, postId);
         post.setDeletedAt(LocalDateTime.now(clock));
+        r2ImageStorageService.deleteManagedImages(post.getImageUrls());
+        post.setImageUrls(new ArrayList<>());
     }
 
     @Transactional
