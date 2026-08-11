@@ -19,13 +19,16 @@ import com.hicct3.projectfinder.service.ProjectApplicationService;
 import com.hicct3.projectfinder.service.ProjectQueryService;
 import com.hicct3.projectfinder.service.ProjectService;
 import com.hicct3.projectfinder.service.ReviewService;
+import com.hicct3.projectfinder.service.SecurityRateLimitService;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
 import java.util.Map;
 
 
@@ -37,6 +40,7 @@ public class ProjectController {
     private final ProjectQueryService projectQueryService;
     private final ProjectApplicationService projectApplicationService;
     private final ReviewService reviewService;
+    private final SecurityRateLimitService rateLimitService;
 
     @Operation(summary = "팀원 목록 조회")
     @GetMapping("/{projectId}/members")
@@ -145,8 +149,16 @@ public class ProjectController {
 
     @Operation(summary = "프로젝트 상세 조회")
     @GetMapping("/{projectId}")
-    private ApiResponse<ProjectDetailResponseDTO> getProjectDetail(@PathVariable Long projectId)
+    private ApiResponse<ProjectDetailResponseDTO> getProjectDetail(
+            HttpServletRequest request,
+            @PathVariable Long projectId)
     {
+        String remoteAddress = request.getRemoteAddr();
+        rateLimitService.consume(
+                "project-view",
+                remoteAddress == null || remoteAddress.isBlank() ? "unknown" : remoteAddress,
+                120,
+                Duration.ofMinutes(1));
         return ApiResponse.onSuccess("프로젝트 상세 조회 성공했습니다.", projectQueryService.getProjectDetail(projectId));
     }
 

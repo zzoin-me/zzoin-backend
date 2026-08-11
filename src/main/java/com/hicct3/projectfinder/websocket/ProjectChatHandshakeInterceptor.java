@@ -1,6 +1,8 @@
 package com.hicct3.projectfinder.websocket;
 
 import com.hicct3.projectfinder.global.JwtProvider;
+import com.hicct3.projectfinder.global.RateLimitException;
+import com.hicct3.projectfinder.service.SecurityRateLimitService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.ServerHttpRequest;
@@ -10,6 +12,7 @@ import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.HandshakeInterceptor;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -23,6 +26,7 @@ public class ProjectChatHandshakeInterceptor implements HandshakeInterceptor {
     private static final Pattern PROJECT_PATH = Pattern.compile("/ws/projects/(\\d+)$");
 
     private final JwtProvider jwtProvider;
+    private final SecurityRateLimitService rateLimitService;
 
     @Override
     public boolean beforeHandshake(
@@ -30,6 +34,17 @@ public class ProjectChatHandshakeInterceptor implements HandshakeInterceptor {
             ServerHttpResponse response,
             WebSocketHandler wsHandler,
             Map<String, Object> attributes) {
+        String clientAddress = request.getRemoteAddress() == null
+                ? "unknown"
+                : request.getRemoteAddress().getAddress().getHostAddress();
+        try {
+            rateLimitService.consume(
+                    "websocket-handshake", clientAddress, 20, Duration.ofMinutes(1));
+        } catch (RateLimitException exception) {
+            response.setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
+            return false;
+        }
+
         String token = UriComponentsBuilder.fromUri(request.getURI())
                 .build()
                 .getQueryParams()
