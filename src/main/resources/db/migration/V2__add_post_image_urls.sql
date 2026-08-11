@@ -1,0 +1,2 @@
+ALTER TABLE posts
+    ADD COLUMN image_urls TEXT NULL;

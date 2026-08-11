@@ -4,6 +4,7 @@ import com.hicct3.projectfinder.entity.Post;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -14,6 +15,7 @@ public class PostDetailResponseDTO {
     private Long id;
     private String title;
     private String content;
+    private List<String> imageUrls;
     private AuthorDTO author;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -29,6 +31,7 @@ public class PostDetailResponseDTO {
                 .id(post.getId())
                 .title(post.getTitle())
                 .content(post.getContent())
+                .imageUrls(post.getImageUrls())
                 .author(AuthorDTO.from(post.getAuthor()))
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())

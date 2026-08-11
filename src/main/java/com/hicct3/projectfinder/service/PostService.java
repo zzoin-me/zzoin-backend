@@ -17,6 +17,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.time.LocalDateTime;
 import java.time.Clock;
 
@@ -39,6 +40,7 @@ public class PostService {
         Post post = Post.builder()
                 .title(req.getTitle())
                 .content(req.getContent())
+                .imageUrls(req.getImageUrls() == null ? new ArrayList<>() : req.getImageUrls())
                 .author(user)
                 .viewCount(0)
                 .createdAt(now)
@@ -57,6 +59,9 @@ public class PostService {
         }
         if (req.getContent() != null && !req.getContent().isBlank()) {
             post.setContent(req.getContent());
+        }
+        if (req.getImageUrls() != null) {
+            post.setImageUrls(req.getImageUrls());
         }
         post.setUpdatedAt(LocalDateTime.now(clock));
     }

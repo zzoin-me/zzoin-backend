@@ -1,19 +1,40 @@
 package com.hicct3.projectfinder.controller;
 
-import com.hicct3.projectfinder.dto.community.*;
 import com.hicct3.projectfinder.dto.common.PageResponseDTO;
+import com.hicct3.projectfinder.dto.community.CreatePostRequestDTO;
+import com.hicct3.projectfinder.dto.community.PostDetailResponseDTO;
+import com.hicct3.projectfinder.dto.community.PostImageUploadResponseDTO;
+import com.hicct3.projectfinder.dto.community.PostPreviewResponseDTO;
+import com.hicct3.projectfinder.dto.community.ToggleResultDTO;
+import com.hicct3.projectfinder.dto.community.UpdatePostRequestDTO;
+import com.hicct3.projectfinder.dto.community.ViewCountResultDTO;
 import com.hicct3.projectfinder.entity.enums.PostBoardType;
 import com.hicct3.projectfinder.entity.enums.PostSortType;
 import com.hicct3.projectfinder.global.ApiResponse;
 import com.hicct3.projectfinder.global.CustomUserDetails;
 import com.hicct3.projectfinder.service.PostQueryService;
 import com.hicct3.projectfinder.service.PostService;
+import com.hicct3.projectfinder.service.R2ImageStorageService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -22,6 +43,7 @@ public class PostController {
 
     private final PostService postService;
     private final PostQueryService postQueryService;
+    private final R2ImageStorageService r2ImageStorageService;
 
     @Operation(summary = "게시글 목록 조회")
     @GetMapping
@@ -70,6 +92,17 @@ public class PostController {
         Long userId = ((CustomUserDetails) authentication.getPrincipal()).getId();
         Long postId = postService.createPost(userId, req);
         return ApiResponse.onSuccess("게시글 등록에 성공했습니다.", postId);
+    }
+
+    @Operation(summary = "게시글 이미지 업로드")
+    @PostMapping(value = "/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<PostImageUploadResponseDTO> uploadPostImages(
+            Authentication authentication,
+            @RequestPart("images") List<MultipartFile> images
+    ) {
+        Long userId = ((CustomUserDetails) authentication.getPrincipal()).getId();
+        List<String> imageUrls = r2ImageStorageService.uploadPostImages(userId, images);
+        return ApiResponse.onSuccess("게시글 이미지 업로드에 성공했습니다.", PostImageUploadResponseDTO.of(imageUrls));
     }
 
     @Operation(summary = "게시글 수정")

@@ -1,9 +1,12 @@
 package com.hicct3.projectfinder.entity;
 
+import com.hicct3.projectfinder.global.StringListJsonConverter;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "posts")
@@ -22,6 +25,11 @@ public class Post {
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
+
+    @Convert(converter = StringListJsonConverter.class)
+    @Column(columnDefinition = "TEXT")
+    @Builder.Default
+    private List<String> imageUrls = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "author_id")

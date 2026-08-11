@@ -9,11 +9,9 @@ import com.hicct3.projectfinder.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
-import java.util.LinkedHashSet;
-import org.springframework.stereotype.Service;
-
 import java.util.LinkedHashSet;
 
 @Service
@@ -21,6 +19,7 @@ import java.util.LinkedHashSet;
 public class UserService {
     private final UserRepository userRepository;
     private final StackRepository stackRepository;
+    private final R2ImageStorageService r2ImageStorageService;
 
     @Transactional
     public UserProfileResponseDTO getUserProfile(Long userId) {
@@ -122,6 +121,14 @@ public class UserService {
         if(req.getProfileUrl() != null)
             user.setProfileUrl(req.getProfileUrl());
 
+    }
+
+    @Transactional
+    public String updateProfileImage(Long userId, MultipartFile image) {
+        var user = userRepository.findById(userId).orElseThrow(()->new GeneralException(ErrorCode.USER_NOT_FOUND));
+        String profileUrl = r2ImageStorageService.uploadProfileImage(userId, image);
+        user.setProfileUrl(profileUrl);
+        return profileUrl;
     }
 
     @Transactional
