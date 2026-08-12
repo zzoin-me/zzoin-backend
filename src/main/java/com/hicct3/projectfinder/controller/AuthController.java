@@ -50,6 +50,28 @@ public class AuthController {
         return ApiResponse.onSuccess("소셜 계정 연결에 성공했습니다.", dto);
     }
 
+    @Operation(summary = "소셜 회원가입 완료")
+    @PostMapping("/social-signup")
+    public ApiResponse<LoginResponseDTO> completeSocialSignup(
+            HttpServletRequest request,
+            @RequestBody @Valid SocialSignUpRequestDTO req) {
+        rateLimitService.consume(
+                "oauth-signup",
+                clientIp(request),
+                20,
+                Duration.ofMinutes(15)
+        );
+        Map<String, Object> result = oAuthAuthService.completeSocialSignup(
+                req.getSignupToken(),
+                req.getNickName()
+        );
+        LoginResponseDTO dto = LoginResponseDTO.builder()
+                .accessToken((String) result.get("accessToken"))
+                .refreshToken((String) result.get("refreshToken"))
+                .build();
+        return ApiResponse.onSuccess("소셜 회원가입에 성공했습니다.", dto);
+    }
+
     @Operation(summary = "회원가입 이메일 전송")
     @PostMapping("/signup/email/send")
     public ApiResponse<Void> sendSignupEmail(
