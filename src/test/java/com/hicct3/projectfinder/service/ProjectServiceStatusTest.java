@@ -2,12 +2,15 @@ package com.hicct3.projectfinder.service;
 
 import com.hicct3.projectfinder.dto.project.UpdateProjectStatusRequestDTO;
 import com.hicct3.projectfinder.dto.project.UpdateProjectRequestDTO;
+import com.hicct3.projectfinder.dto.project.CreateQuestionRequestDTO;
 import com.hicct3.projectfinder.entity.Project;
 import com.hicct3.projectfinder.entity.ProjectMember;
+import com.hicct3.projectfinder.entity.ProjectQuestion;
 import com.hicct3.projectfinder.entity.User;
 import com.hicct3.projectfinder.entity.enums.ApplicationStatus;
 import com.hicct3.projectfinder.entity.enums.MemberStatus;
 import com.hicct3.projectfinder.entity.enums.ProjectStatus;
+import com.hicct3.projectfinder.entity.enums.QuestionType;
 import com.hicct3.projectfinder.global.ErrorCode;
 import com.hicct3.projectfinder.global.GeneralException;
 import com.hicct3.projectfinder.repository.JobCategoryRepository;
@@ -30,10 +33,13 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Optional;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.anyList;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -136,6 +142,57 @@ class ProjectServiceStatusTest {
 
         assertEquals(ErrorCode.PROJECT_EDIT_CLOSED, exception.getErrorCode());
         assertEquals("기존 제목", project.getTitle());
+    }
+
+    @Test
+    void replacesQuestionsWhenProjectHasNoApplications() {
+        stubClock();
+        Project project = project(ProjectStatus.RECRUITING);
+        ProjectQuestion existingQuestion = ProjectQuestion.builder()
+                .project(project)
+                .label("기존 질문")
+                .build();
+        stubProject(project);
+        when(projectQuestionRepository.findAllByProjectAndDeletedAtIsNullOrderByIdAsc(project))
+                .thenReturn(List.of(existingQuestion));
+
+        projectService.updateProject(
+                1L,
+                10L,
+                UpdateProjectRequestDTO.builder()
+                        .questions(List.of(CreateQuestionRequestDTO.builder()
+                                .type(QuestionType.TEXT)
+                                .label("새 질문")
+                                .required(false)
+                                .build()))
+                        .build());
+
+        assertEquals(java.time.LocalDateTime.of(2026, 8, 10, 9, 0), existingQuestion.getDeletedAt());
+        verify(projectQuestionRepository, times(2)).saveAll(anyList());
+    }
+
+    @Test
+    void rejectsQuestionChangesWhenAnyApplicationExists() {
+        stubClock();
+        Project project = project(ProjectStatus.RECRUITING);
+        stubProject(project);
+        when(projectApplicationRepository.existsByProject(project)).thenReturn(true);
+
+        GeneralException exception = assertThrows(
+                GeneralException.class,
+                () -> projectService.updateProject(
+                        1L,
+                        10L,
+                        UpdateProjectRequestDTO.builder().questions(List.of()).build()));
+
+        assertEquals(ErrorCode.PROJECT_QUESTIONS_EDIT_LOCKED, exception.getErrorCode());
+        verify(projectQuestionRepository, never())
+                .findAllByProjectAndDeletedAtIsNullOrderByIdAsc(project);
+    }
+
+    private void stubClock() {
+        when(clock.instant()).thenReturn(Instant.parse("2026-08-10T00:00:00Z"));
+        when(clock.getZone()).thenReturn(ZoneId.of("Asia/Seoul"));
     }
 
     private Project project(ProjectStatus status) {

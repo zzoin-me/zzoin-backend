@@ -42,5 +42,7 @@ public class UpdateProjectRequestDTO {
     @Size(min = 1, max = 6, message = "모집 역할은 1개 이상 6개 이하로 등록할 수 있습니다.")
     private List<@Valid UpdateRecruitmentRequestDTO> recruitments;
 
+    @Size(max = 10, message = "추가 질문은 최대 10개까지 등록할 수 있습니다.")
+    private List<@Valid CreateQuestionRequestDTO> questions;
 
 }
