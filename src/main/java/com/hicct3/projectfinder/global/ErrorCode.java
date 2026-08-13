@@ -23,6 +23,8 @@ public enum ErrorCode {
     SIGNUP_EMAIL_MISMATCH(HttpStatus.BAD_REQUEST, "회원가입 인증 이메일과 요청 이메일이 일치하지 않습니다."),
     INVALID_USER(HttpStatus.BAD_REQUEST, "유효하지 않은 사용자입니다."),
     USER_WITHDRAWN(HttpStatus.BAD_REQUEST, "탈퇴한 사용자입니다."),
+    ACCOUNT_RECOVERY_AVAILABLE(HttpStatus.CONFLICT, "30일 이내에 탈퇴한 계정입니다. 로그인하여 계정을 복구해주세요."),
+    ACCOUNT_RECOVERY_EXPIRED(HttpStatus.BAD_REQUEST, "계정 복구 기간이 지났습니다. 새로 회원가입해주세요."),
 
     // Notification
     NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "알림을 찾을 수 없습니다."),
@@ -31,15 +33,19 @@ public enum ErrorCode {
     // User
     USER_NOT_FOUND(HttpStatus.BAD_REQUEST, "사용자가 존재하지 않습니다."),
     DUPLICATE_NICKNAME(HttpStatus.BAD_REQUEST, "이미 사용 중인 닉네임입니다."),
+    RESERVED_NICKNAME(HttpStatus.BAD_REQUEST, "사용할 수 없는 단어가 포함된 닉네임입니다."),
     DUPLICATE_EMAIL(HttpStatus.BAD_REQUEST, "사용 중인 이메일입니다."),
     DUPLICATE_VERIFIED_EMAIL(HttpStatus.BAD_REQUEST, "인증에 이용된 이메일입니다."),
     EMAIL_USED_BY_OTHER_ACCOUNT(HttpStatus.BAD_REQUEST, "이미 다른 계정에서 사용 중인 이메일입니다."),
+    SOCIAL_UNLINK_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "일반 로그인 수단이 없는 소셜 전용 계정은 연동을 해제할 수 없습니다."),
+    SOCIAL_ACCOUNT_NOT_LINKED(HttpStatus.BAD_REQUEST, "연동된 소셜 계정이 없습니다."),
     USER_NOT_VERIFIED(HttpStatus.BAD_REQUEST, "인증되지 않은 사용자입니다."),
     USER_ID_DUPLICATE(HttpStatus.BAD_REQUEST, "중복되는 유저 ID입니다."),
     NICKNAME_CHANGE_COOLDOWN(HttpStatus.BAD_REQUEST, "닉네임은 90일마다 변경할 수 있습니다."),
 
     // Email
     EMAIL_SEND_FAILED(HttpStatus.BAD_REQUEST, "이메일 전송에 실패했습니다."),
+    SOCIAL_EMAIL_REQUIRED(HttpStatus.BAD_REQUEST, "소셜 계정에서 이메일을 제공받지 못해 가입할 수 없습니다."),
     EMAIL_VERIFICATION_NOT_FOUND(HttpStatus.BAD_REQUEST, "이메일 인증 코드가 존재하지 않습니다."),
     EMAIL_CODE_MISMATCH(HttpStatus.BAD_REQUEST, "이메일 인증 코드가 일치하지 않습니다."),
     EMAIL_CODE_EXPIRED(HttpStatus.BAD_REQUEST, "이메일 인증 코드가 만료되었습니다."),

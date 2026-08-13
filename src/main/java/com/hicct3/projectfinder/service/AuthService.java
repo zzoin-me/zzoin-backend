@@ -9,6 +9,7 @@ import com.hicct3.projectfinder.global.CustomUserDetails;
 import com.hicct3.projectfinder.global.ErrorCode;
 import com.hicct3.projectfinder.global.GeneralException;
 import com.hicct3.projectfinder.global.JwtProvider;
+import com.hicct3.projectfinder.global.NicknamePolicy;
 import com.hicct3.projectfinder.repository.SchoolDomainRepository;
 import com.hicct3.projectfinder.repository.EmailVerificationRepository;
 import com.hicct3.projectfinder.repository.RefreshTokenRepository;
@@ -27,6 +28,7 @@ import org.springframework.stereotype.Service;
 import java.security.SecureRandom;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -42,6 +44,7 @@ public class AuthService {
     private final JavaMailSender mailSender;
     private final AuthenticationManager authenticationManager;
     private final EmailVerificationAttemptService emailVerificationAttemptService;
+    private final AccountLifecycleService accountLifecycleService;
 
     @Value("${spring.mail.username}")
     private String fromEmail;
@@ -57,27 +60,15 @@ public class AuthService {
 
             var user = ((CustomUserDetails) auth.getPrincipal()).getUser();
 
-            if(user.isDeleted())
-                throw new GeneralException(ErrorCode.USER_WITHDRAWN);
+            if(user.isDeleted()) {
+                if (!accountLifecycleService.isRecoverable(user)) {
+                    accountLifecycleService.finalizeExpiredAccount(user.getUserId());
+                    throw new GeneralException(ErrorCode.ACCOUNT_RECOVERY_EXPIRED);
+                }
+                return recoveryResponse(user);
+            }
 
-            //토큰 생성
-            String accessToken = jwtProvider.createAccessToken(user.getUserId());
-            String refreshToken = jwtProvider.createRefreshToken(user.getUserId());
-
-            //토큰 저장
-            refreshTokenRepository.findByUserId(user.getUserId())
-                    .ifPresentOrElse(
-                            tokenEntity -> tokenEntity.update(refreshToken),
-                            () -> refreshTokenRepository.save(RefreshToken.builder()
-                                    .userId(user.getUserId())
-                                    .token(refreshToken)
-                                    .build())
-                    );
-
-            return LoginResponseDTO.builder()
-                    .accessToken(accessToken)
-                    .refreshToken(refreshToken)
-                    .build();
+            return issueTokens(user);
         } catch(AuthenticationException e)
         {
             throw new GeneralException(ErrorCode.AUTHENTICATION_FAILED);
@@ -107,7 +98,7 @@ public class AuthService {
         String originalEmail = user.getEmail();
 
         refreshTokenRepository.deleteByUserId(userId);
-        user.withDraw();
+        user.requestWithdrawal(LocalDateTime.now());
 
         sendWithdrawCompletedEmail(originalEmail);
     }
@@ -161,21 +152,19 @@ public class AuthService {
     {
         var lowerEmail = req.getEmail().trim().toLowerCase();
         var tokenEmail = jwtProvider.verifySignupTokenAndGetEmail(req.getSignupToken()).trim().toLowerCase();
+        var normalizedNickname = NicknamePolicy.normalizeAndValidate(req.getNickName());
 
         if (!lowerEmail.equals(tokenEmail)) {
             throw new GeneralException(ErrorCode.SIGNUP_EMAIL_MISMATCH);
         }
 
-        if(userRepository.existsByNickName(req.getNickName()))
+        if(userRepository.existsByNickName(normalizedNickname))
         {
             throw new GeneralException(ErrorCode.DUPLICATE_NICKNAME);
         }
 
         //이미 가입되었는지 조회
-        if(userRepository.findByAnyEmail(lowerEmail).isPresent())
-        {
-            throw new GeneralException(ErrorCode.DUPLICATE_EMAIL);
-        }
+        assertEmailAvailableForSignup(lowerEmail);
 
         if(userRepository.existsByVerifiedEmail(lowerEmail))
         {
@@ -186,11 +175,12 @@ public class AuthService {
         var schoolDomainOpt = schoolDomainRepository.findByMatchingDomain(domain);
 
         var user = User.builder()
-                .nickName(req.getNickName())
+                .nickName(normalizedNickname)
                 .email(lowerEmail)
                 .password(passwordEncoder.encode(req.getPassword()))
                 .verified(schoolDomainOpt.isPresent())
                 .admin(false)
+                .localLoginEnabled(true)
                 .nicknameChangedAt(java.time.LocalDateTime.now())
                 .build();
 
@@ -209,10 +199,7 @@ public class AuthService {
     {
         var lowerEmail = email.trim().toLowerCase();
 
-        if(userRepository.findByAnyEmail(lowerEmail).isPresent())
-        {
-            throw new GeneralException(ErrorCode.DUPLICATE_EMAIL);
-        }
+        assertEmailAvailableForSignup(lowerEmail);
 
         String code = createCode();
 
@@ -300,6 +287,21 @@ public class AuthService {
                 .build();
     }
 
+    @Transactional
+    public LoginResponseDTO recoverAccount(String recoveryToken) {
+        Long userId = jwtProvider.verifyAccountRecoveryToken(recoveryToken);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorCode.USER_NOT_FOUND));
+
+        if (!accountLifecycleService.isRecoverable(user)) {
+            accountLifecycleService.finalizeExpiredAccount(user.getUserId());
+            throw new GeneralException(ErrorCode.ACCOUNT_RECOVERY_EXPIRED);
+        }
+
+        accountLifecycleService.recover(user);
+        return issueTokens(user);
+    }
+
     //대학 이메일 코드 전송
     @Transactional
     public void sendEmail(Long userId, String email)
@@ -385,6 +387,46 @@ public class AuthService {
         return email.substring(atIndex + 1);
     }
 
+    private void assertEmailAvailableForSignup(String email) {
+        Optional<User> existing = userRepository.findByAnyEmail(email);
+        if (existing.isEmpty()) return;
+
+        User user = existing.get();
+        if (!user.isDeleted()) {
+            throw new GeneralException(ErrorCode.DUPLICATE_EMAIL);
+        }
+        if (accountLifecycleService.finalizeIfExpired(user)) {
+            return;
+        }
+        throw new GeneralException(ErrorCode.ACCOUNT_RECOVERY_AVAILABLE);
+    }
+
+    private LoginResponseDTO recoveryResponse(User user) {
+        return LoginResponseDTO.builder()
+                .recoveryRequired(true)
+                .recoveryToken(jwtProvider.createAccountRecoveryToken(user.getUserId()))
+                .recoverableUntil(user.getRecoverableUntil())
+                .build();
+    }
+
+    private LoginResponseDTO issueTokens(User user) {
+        String accessToken = jwtProvider.createAccessToken(user.getUserId());
+        String refreshToken = jwtProvider.createRefreshToken(user.getUserId());
+        refreshTokenRepository.findByUserId(user.getUserId())
+                .ifPresentOrElse(
+                        tokenEntity -> tokenEntity.update(refreshToken),
+                        () -> refreshTokenRepository.save(RefreshToken.builder()
+                                .userId(user.getUserId())
+                                .token(refreshToken)
+                                .build())
+                );
+        return LoginResponseDTO.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .recoveryRequired(false)
+                .build();
+    }
+
     private String createCode() {
         StringBuilder code = new StringBuilder();
 
@@ -399,9 +441,10 @@ public class AuthService {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(fromEmail);
         message.setTo(email);
-        message.setSubject("회원탈퇴가 완료되었습니다.");
-        message.setText("Zzoin 회원탈퇴가 완료되었습니다.\n"
-                + "그동안 이용해주셔서 감사합니다.");
+        message.setSubject("회원탈퇴가 접수되었습니다.");
+        message.setText("Zzoin 회원탈퇴가 접수되었습니다.\n"
+                + "탈퇴일로부터 30일 이내에는 같은 계정으로 로그인하여 복구할 수 있습니다.\n"
+                + "30일이 지나면 개인정보가 익명화되며 같은 로그인 수단으로 새 계정을 만들 수 있습니다.");
 
         try {
             mailSender.send(message);

@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 @AllArgsConstructor
 @Builder
 @Getter
@@ -12,4 +14,7 @@ import lombok.Setter;
 public class LoginResponseDTO {
     private String accessToken;
     private String refreshToken;
+    private Boolean recoveryRequired;
+    private String recoveryToken;
+    private LocalDateTime recoverableUntil;
 }

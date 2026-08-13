@@ -10,8 +10,11 @@ import com.hicct3.projectfinder.service.OAuthAuthService;
 import com.hicct3.projectfinder.service.SecurityRateLimitService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -48,6 +51,16 @@ public class AuthController {
                 .refreshToken((String) result.get("refreshToken"))
                 .build();
         return ApiResponse.onSuccess("소셜 계정 연결에 성공했습니다.", dto);
+    }
+
+    @Operation(summary = "소셜 계정 연동 해제")
+    @DeleteMapping("/social-link")
+    public ApiResponse<Void> unlinkSocial(
+            Authentication auth,
+            @RequestBody @Valid UnlinkSocialRequestDTO req) {
+        var userId = ((CustomUserDetails) auth.getPrincipal()).getId();
+        oAuthAuthService.unlinkSocial(userId, req.getPassword());
+        return ApiResponse.onSuccess("소셜 계정 연동을 해제했습니다.", null);
     }
 
     @Operation(summary = "소셜 회원가입 완료")
@@ -148,6 +161,30 @@ public class AuthController {
             }
             throw exception;
         }
+    }
+
+    @Operation(summary = "탈퇴 계정 복구")
+    @PostMapping("/recover")
+    public ApiResponse<LoginResponseDTO> recoverAccount(
+            @RequestBody(required = false) AccountRecoveryRequestDTO req,
+            @CookieValue(value = "zzoin_recovery", required = false) String cookieToken,
+            HttpServletResponse response) {
+        String bodyToken = req == null ? null : req.getRecoveryToken();
+        String recoveryToken = bodyToken == null || bodyToken.isBlank() ? cookieToken : bodyToken;
+        if (recoveryToken == null || recoveryToken.isBlank()) {
+            throw new GeneralException(ErrorCode.INVALID_TOKEN);
+        }
+        LoginResponseDTO result = authService.recoverAccount(recoveryToken);
+        response.addHeader(HttpHeaders.SET_COOKIE, ResponseCookie.from("zzoin_recovery", "")
+                .httpOnly(true)
+                .sameSite("Lax")
+                .path("/api/auth/recover")
+                .maxAge(0)
+                .build().toString());
+        return ApiResponse.onSuccess(
+                "계정을 복구했습니다.",
+                result
+        );
     }
 
     @Operation(summary = "로그아웃")

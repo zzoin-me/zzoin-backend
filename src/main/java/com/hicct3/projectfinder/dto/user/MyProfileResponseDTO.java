@@ -24,6 +24,10 @@ public class MyProfileResponseDTO {
     private Boolean verified;
     private String verifiedEmail;
     private LocalDateTime nicknameChangeableAt;
+    private String socialProvider;
+    private Boolean socialLinked;
+    private Boolean canUnlinkSocial;
+    private Boolean localLoginEnabled;
 
     private List<StackInfoResponseDTO> stackInfoList;
 

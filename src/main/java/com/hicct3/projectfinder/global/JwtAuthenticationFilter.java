@@ -55,7 +55,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (SecurityContextHolder.getContext().getAuthentication() == null) {
             User user = userRepository.findById(userId).orElse(null);
 
-            if (user != null) {
+            if (user != null && !user.isDeleted()) {
                 CustomUserDetails userDetails = new CustomUserDetails(user);
 
                 UsernamePasswordAuthenticationToken authentication =

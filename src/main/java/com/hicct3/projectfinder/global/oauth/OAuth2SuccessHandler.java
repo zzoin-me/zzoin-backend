@@ -5,6 +5,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
@@ -43,6 +45,20 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         Map<String, Object> result = oAuthAuthService.processSocialLogin(attrs);
         OAuthAuthService.SocialLoginResult resultType = (OAuthAuthService.SocialLoginResult) result.get("result");
 
+        if (resultType == OAuthAuthService.SocialLoginResult.RECOVERY) {
+            ResponseCookie recoveryCookie = ResponseCookie.from(
+                            "zzoin_recovery",
+                            (String) result.get("recoveryToken")
+                    )
+                    .httpOnly(true)
+                    .secure(frontRedirectBase.startsWith("https://"))
+                    .sameSite("Lax")
+                    .path("/api/auth/recover")
+                    .maxAge(1800)
+                    .build();
+            response.addHeader(HttpHeaders.SET_COOKIE, recoveryCookie.toString());
+        }
+
         String redirectUrl = switch (resultType) {
             case LOGIN -> buildTokenUrl("/auth/callback", result, false);
             case SIGNUP -> UriComponentsBuilder.fromUriString(frontRedirectBase + "/social-signup")
@@ -60,6 +76,18 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                     .queryParam("error", "social_conflict")
                     .queryParam("existingProvider", result.get("existingProvider"))
                     .build().toUriString();
+            case EMAIL_REQUIRED -> UriComponentsBuilder.fromUriString(frontRedirectBase + "/login")
+                    .queryParam("error", "social_email_required")
+                    .queryParam("provider", result.get("provider"))
+                    .build().toUriString();
+            case RECOVERY_PROVIDER_MISMATCH -> UriComponentsBuilder.fromUriString(frontRedirectBase + "/login")
+                    .queryParam("error", "recovery_provider_mismatch")
+                    .queryParam("existingProvider", result.get("existingProvider"))
+                    .build().toUriString();
+            case RECOVERY -> UriComponentsBuilder.fromUriString(frontRedirectBase + "/account-recovery")
+                    .queryParam("recoverableUntil", result.get("recoverableUntil"))
+                    .queryParam("provider", result.get("provider"))
+                    .build().encode().toUriString();
         };
 
         getRedirectStrategy().sendRedirect(request, response, redirectUrl);

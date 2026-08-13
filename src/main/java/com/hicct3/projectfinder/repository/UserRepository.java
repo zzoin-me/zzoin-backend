@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
+import java.time.LocalDateTime;
+import java.util.List;
 
 public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
@@ -13,6 +15,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByVerifiedEmail(String verifiedEmail);
     Optional<User> findByEmail(String email);
     Optional<User> findByProviderAndProviderId(String provider, String providerId);
+    List<User> findAllByDeletedAtBeforeAndDeletionFinalizedAtIsNull(LocalDateTime cutoff);
 
     @Query("""
     SELECT u

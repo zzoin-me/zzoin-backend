@@ -67,6 +67,13 @@ public class User {
     @Column
     private LocalDateTime deletedAt;
 
+    @Column
+    private LocalDateTime deletionFinalizedAt;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean localLoginEnabled = true;
+
     @Column(nullable = false)
     private Boolean admin;
 
@@ -91,16 +98,38 @@ public class User {
     )
     private List<Stack> stacks = new ArrayList<>();
 
-    //계정 삭제 처리
-    public void withDraw()
+    public void requestWithdrawal(LocalDateTime requestedAt) {
+        this.deletedAt = requestedAt;
+        this.deletionFinalizedAt = null;
+    }
+
+    public boolean isRecoverable(LocalDateTime now) {
+        return this.deletedAt != null
+                && this.deletionFinalizedAt == null
+                && now.isBefore(this.deletedAt.plusDays(30));
+    }
+
+    public LocalDateTime getRecoverableUntil() {
+        return this.deletedAt == null ? null : this.deletedAt.plusDays(30);
+    }
+
+    public void recover() {
+        this.deletedAt = null;
+        this.deletionFinalizedAt = null;
+    }
+
+    public void finalizeWithdrawal(LocalDateTime finalizedAt)
     {
-        this.deletedAt = LocalDateTime.now();
+        this.deletionFinalizedAt = finalizedAt;
 
         this.nickName = "DELETED_USER_" + this.userId;
         this.email = "DELETED_EMAIL_" + this.userId + "@deleted.local";
         this.verifiedEmail = null;
 
         this.password = "";
+        this.provider = "local";
+        this.providerId = null;
+        this.localLoginEnabled = false;
         this.verified = false;
         this.grade = null;
         this.major = null;

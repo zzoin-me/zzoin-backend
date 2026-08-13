@@ -4,6 +4,7 @@ import com.hicct3.projectfinder.dto.stack.StackInfoResponseDTO;
 import com.hicct3.projectfinder.dto.user.*;
 import com.hicct3.projectfinder.global.ErrorCode;
 import com.hicct3.projectfinder.global.GeneralException;
+import com.hicct3.projectfinder.global.NicknamePolicy;
 import com.hicct3.projectfinder.repository.StackRepository;
 import com.hicct3.projectfinder.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -59,6 +60,11 @@ public class UserService {
                         ? null
                         : user.getNicknameChangedAt().plusDays(90)
                 )
+                .socialProvider("local".equals(user.getProvider()) ? null : user.getProvider())
+                .socialLinked(!"local".equals(user.getProvider()))
+                .canUnlinkSocial(!"local".equals(user.getProvider())
+                        && !Boolean.FALSE.equals(user.getLocalLoginEnabled()))
+                .localLoginEnabled(user.getLocalLoginEnabled())
                 .stackInfoList(user.getStacks().stream().
                         map(x->StackInfoResponseDTO.builder()
                                 .id(x.getId())
@@ -87,18 +93,21 @@ public class UserService {
     {
         var user = userRepository.findById(userId).orElseThrow(()->new GeneralException(ErrorCode.USER_NOT_FOUND));
 
-        if(req.getNickName() != null && !req.getNickName().equals(user.getNickName()))
+        if(req.getNickName() != null)
         {
-            if (user.getNicknameChangedAt() != null
-                    && user.getNicknameChangedAt().plusDays(90).isAfter(LocalDateTime.now())) {
-                throw new GeneralException(ErrorCode.NICKNAME_CHANGE_COOLDOWN);
+            String normalizedNickname = NicknamePolicy.normalizeAndValidate(req.getNickName());
+            if (!normalizedNickname.equals(user.getNickName())) {
+                if (user.getNicknameChangedAt() != null
+                        && user.getNicknameChangedAt().plusDays(90).isAfter(LocalDateTime.now())) {
+                    throw new GeneralException(ErrorCode.NICKNAME_CHANGE_COOLDOWN);
+                }
+
+                if(userRepository.existsByNickName(normalizedNickname))
+                    throw new GeneralException(ErrorCode.DUPLICATE_NICKNAME);
+
+                user.setNickName(normalizedNickname);
+                user.setNicknameChangedAt(LocalDateTime.now());
             }
-
-            if(userRepository.existsByNickName(req.getNickName()))
-                throw new GeneralException(ErrorCode.DUPLICATE_NICKNAME);
-
-            user.setNickName(req.getNickName());
-            user.setNicknameChangedAt(LocalDateTime.now());
         }
 
         if(req.getBio() != null)

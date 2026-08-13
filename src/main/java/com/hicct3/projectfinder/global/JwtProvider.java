@@ -19,6 +19,7 @@ public class JwtProvider {
     private final long REFRESH_TOKEN_VALIDITY = 1000L * 60 * 60 * 24 * 14;
     private final long SIGNUP_TOKEN_VALIDITY = 1000L * 60 * 10;
     private final long SOCIAL_SIGNUP_TOKEN_VALIDITY = 1000L * 60 * 30;
+    private final long ACCOUNT_RECOVERY_TOKEN_VALIDITY = 1000L * 60 * 30;
 
 
     public JwtProvider(@Value("${jwt.secret}") String secret) {
@@ -36,6 +37,10 @@ public class JwtProvider {
 
     public String createSignupToken(String email) {
         return buildToken(email, "SIGNUP", SIGNUP_TOKEN_VALIDITY);
+    }
+
+    public String createAccountRecoveryToken(Long userId) {
+        return buildToken(userId.toString(), "ACCOUNT_RECOVERY", ACCOUNT_RECOVERY_TOKEN_VALIDITY);
     }
 
     public String createSocialLinkToken(String email, String provider, String providerId, String profileImageUrl) {
@@ -141,6 +146,14 @@ public class JwtProvider {
                 claims.get("profile_image_url", String.class),
                 claims.get("email_verified", Boolean.class)
         );
+    }
+
+    public Long verifyAccountRecoveryToken(String token) {
+        Claims claims = getClaims(token);
+        if (!"ACCOUNT_RECOVERY".equals(claims.get("token_type"))) {
+            throw new GeneralException(ErrorCode.INVALID_TOKEN);
+        }
+        return Long.valueOf(claims.getSubject());
     }
 
     public record SocialLinkClaims(
