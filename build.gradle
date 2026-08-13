@@ -58,6 +58,10 @@ tasks.named('test') {
 	useJUnitPlatform()
 }
 
+tasks.named('bootJar') {
+	archiveFileName = 'app.jar'
+}
+
 tasks.named('processResources') {
 	exclude 'firebase-service-account.json'
 }

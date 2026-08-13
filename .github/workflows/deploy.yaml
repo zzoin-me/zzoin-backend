@@ -22,7 +22,6 @@ jobs:
       run: |
         chmod +x gradlew
         ./gradlew clean build -x test
-        mv build/libs/*SNAPSHOT.jar build/libs/app.jar
 
     - name: copy
       uses: appleboy/scp-action@master
