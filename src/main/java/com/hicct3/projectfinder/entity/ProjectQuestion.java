@@ -32,7 +32,7 @@ public class ProjectQuestion {
     @Column(nullable = false)
     private String label;
 
-    @Column
+    @Column(columnDefinition = "TEXT")
     private String options;
 
     @Column(nullable = false)

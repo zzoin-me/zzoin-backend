@@ -13,7 +13,11 @@ import lombok.*;
 @Setter
 public class SignUpRequestDTO {
     @NotBlank
-    @Size(min = 2, max = 50, message = "이름은 2~50자여야 합니다.")
+    @Size(min = 2, max = 20, message = "닉네임은 2~20자여야 합니다.")
+    @Pattern(
+            regexp = "^[가-힣a-zA-Z0-9.]+$",
+            message = "닉네임은 한글, 영문, 숫자, 점만 사용할 수 있습니다."
+    )
     private String nickName;
 
     @NotBlank

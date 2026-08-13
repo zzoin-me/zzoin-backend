@@ -21,7 +21,7 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long userId;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 20)
     private String nickName;
 
     @Column(nullable = false)
@@ -52,7 +52,7 @@ public class User {
     @Column
     private String field;
 
-    @Column
+    @Column(length = 500)
     private String bio;
 
     @Column
@@ -122,7 +122,7 @@ public class User {
     {
         this.deletionFinalizedAt = finalizedAt;
 
-        this.nickName = "DELETED_USER_" + this.userId;
+        this.nickName = "DELETED" + Long.toUnsignedString(this.userId, 36).toUpperCase();
         this.email = "DELETED_EMAIL_" + this.userId + "@deleted.local";
         this.verifiedEmail = null;
 

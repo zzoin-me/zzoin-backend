@@ -11,7 +11,6 @@ import com.hicct3.projectfinder.repository.NotificationRepository;
 import com.hicct3.projectfinder.repository.UserRepository;
 import com.hicct3.projectfinder.global.JwtProvider;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -28,7 +27,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
@@ -100,12 +98,10 @@ public class NotificationService {
 
     @Transactional
     public void markAllAsRead(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(ErrorCode.USER_NOT_FOUND));
-        Page<Notification> unread = notificationRepository.findByUserOrderByCreatedAtDesc(user, Pageable.ofSize(100));
-        unread.getContent().forEach(n -> {
-            if (!n.getIsRead()) n.setIsRead(true);
-        });
+        if (!userRepository.existsById(userId)) {
+            throw new GeneralException(ErrorCode.USER_NOT_FOUND);
+        }
+        notificationRepository.markAllAsReadByUserId(userId);
     }
 
     public SseEmitter subscribe(Long userId) {
@@ -170,23 +166,33 @@ public class NotificationService {
         });
     }
 
+    public void disconnectUser(Long userId) {
+        Set<SseEmitter> userEmitters = emitters.remove(userId);
+        if (userEmitters == null) return;
+        userEmitters.forEach(emitter -> {
+            try {
+                emitter.complete();
+            } catch (RuntimeException ignored) {
+                // 이미 종료된 연결은 정리만 진행합니다.
+            }
+        });
+    }
+
     @Transactional
     public void registerDeviceToken(Long userId, String token, String platform) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorCode.USER_NOT_FOUND));
 
-        if (deviceTokenRepository.findByToken(token).isEmpty()) {
-            try {
-                deviceTokenRepository.save(DeviceToken.builder()
+        LocalDateTime now = LocalDateTime.now();
+        deviceTokenRepository.findByToken(token).ifPresentOrElse(
+                existing -> existing.reassign(user, platform, now),
+                () -> deviceTokenRepository.save(DeviceToken.builder()
                         .user(user)
                         .token(token)
                         .platform(platform)
-                        .createdAt(LocalDateTime.now())
-                        .build());
-            } catch (Exception e) {
-                log.debug("Device token already exists, skipping: {}", token);
-            }
-        }
+                        .createdAt(now)
+                        .build())
+        );
     }
 
     @Transactional

@@ -5,6 +5,9 @@ import java.util.List;
 import java.util.Locale;
 
 public final class NicknamePolicy {
+    private static final int MIN_LENGTH = 2;
+    private static final int MAX_LENGTH = 20;
+    private static final String ALLOWED_PATTERN = "^[가-힣a-zA-Z0-9.]+$";
     private static final List<String> RESERVED_TERMS = List.of(
             "admin",
             "administrator",
@@ -31,6 +34,11 @@ public final class NicknamePolicy {
         }
 
         String normalized = Normalizer.normalize(nickname.trim(), Normalizer.Form.NFKC);
+        if (normalized.length() < MIN_LENGTH
+                || normalized.length() > MAX_LENGTH
+                || !normalized.matches(ALLOWED_PATTERN)) {
+            throw new GeneralException(ErrorCode.INVALID_NICKNAME);
+        }
         String comparable = normalized.toLowerCase(Locale.ROOT);
         if (RESERVED_TERMS.stream().anyMatch(comparable::contains)) {
             throw new GeneralException(ErrorCode.RESERVED_NICKNAME);

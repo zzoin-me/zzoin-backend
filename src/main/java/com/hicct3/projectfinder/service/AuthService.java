@@ -80,6 +80,7 @@ public class AuthService {
     @Transactional
     public void logout(Long userId) {
         refreshTokenRepository.deleteByUserId(userId);
+        accountLifecycleService.deactivateActiveSessions(userId);
     }
 
     //회원탈퇴
@@ -98,6 +99,7 @@ public class AuthService {
         String originalEmail = user.getEmail();
 
         refreshTokenRepository.deleteByUserId(userId);
+        accountLifecycleService.deactivateActiveSessions(userId);
         user.requestWithdrawal(LocalDateTime.now());
 
         sendWithdrawCompletedEmail(originalEmail);
@@ -395,7 +397,8 @@ public class AuthService {
         if (!user.isDeleted()) {
             throw new GeneralException(ErrorCode.DUPLICATE_EMAIL);
         }
-        if (accountLifecycleService.finalizeIfExpired(user)) {
+        if (!accountLifecycleService.isRecoverable(user)) {
+            accountLifecycleService.finalizeExpiredAccount(user.getUserId());
             return;
         }
         throw new GeneralException(ErrorCode.ACCOUNT_RECOVERY_AVAILABLE);

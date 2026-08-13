@@ -21,7 +21,7 @@ public class CreateQuestionRequestDTO {
     @Size(max = 100, message = "질문은 100자 이하여야 합니다.")
     private String label;
 
-    private List<String> options;
+    private List<@Size(max = 100, message = "질문 선택지는 각각 100자 이하여야 합니다.") String> options;
 
     @NotNull
     private Boolean required;

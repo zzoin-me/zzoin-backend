@@ -33,6 +33,7 @@ public enum ErrorCode {
     // User
     USER_NOT_FOUND(HttpStatus.BAD_REQUEST, "사용자가 존재하지 않습니다."),
     DUPLICATE_NICKNAME(HttpStatus.BAD_REQUEST, "이미 사용 중인 닉네임입니다."),
+    INVALID_NICKNAME(HttpStatus.BAD_REQUEST, "닉네임은 한글, 영문, 숫자, 점으로 구성된 2~20자여야 합니다."),
     RESERVED_NICKNAME(HttpStatus.BAD_REQUEST, "사용할 수 없는 단어가 포함된 닉네임입니다."),
     DUPLICATE_EMAIL(HttpStatus.BAD_REQUEST, "사용 중인 이메일입니다."),
     DUPLICATE_VERIFIED_EMAIL(HttpStatus.BAD_REQUEST, "인증에 이용된 이메일입니다."),

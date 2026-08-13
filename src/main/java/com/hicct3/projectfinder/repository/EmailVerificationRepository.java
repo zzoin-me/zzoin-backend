@@ -5,8 +5,11 @@ import com.hicct3.projectfinder.entity.enums.VerificationType;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
+import java.util.Collection;
 
 public interface EmailVerificationRepository extends JpaRepository<EmailVerification, Long> {
     Optional<EmailVerification> findByEmail(String email);
     Optional<EmailVerification> findByEmailAndType(String email, VerificationType type);
+    long deleteAllByUser_UserId(Long userId);
+    long deleteAllByEmailIn(Collection<String> emails);
 }

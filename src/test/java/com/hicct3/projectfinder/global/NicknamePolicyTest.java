@@ -46,4 +46,15 @@ class NicknamePolicyTest {
     void acceptsAndTrimsOrdinaryNickname() {
         assertEquals("새사용자", NicknamePolicy.normalizeAndValidate("  새사용자  "));
     }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"한", "abcdefghijklmnopqrstu", "닉네임!"})
+    void rejectsNicknameOutsideSharedLengthAndCharacterPolicy(String nickname) {
+        GeneralException exception = assertThrows(
+                GeneralException.class,
+                () -> NicknamePolicy.normalizeAndValidate(nickname)
+        );
+
+        assertEquals(ErrorCode.INVALID_NICKNAME, exception.getErrorCode());
+    }
 }

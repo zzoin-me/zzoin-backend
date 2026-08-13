@@ -45,9 +45,10 @@ public class OAuthAuthService {
         if (byProvider.isPresent()) {
             User user = byProvider.get();
             if (user.isDeleted()) {
-                if (!accountLifecycleService.finalizeIfExpired(user)) {
+                if (accountLifecycleService.isRecoverable(user)) {
                     return buildRecoveryResponse(user, attrs.getProvider());
                 }
+                accountLifecycleService.finalizeExpiredAccount(user.getUserId());
             } else {
                 updateSocialProfile(user, attrs.getProfileImageUrl());
                 return buildTokenResponse(user, SocialLoginResult.LOGIN);
@@ -62,9 +63,10 @@ public class OAuthAuthService {
             if (byEmail.isPresent()) {
                 User existing = byEmail.get();
                 if (existing.isDeleted()) {
-                    if (!accountLifecycleService.finalizeIfExpired(existing)) {
+                    if (accountLifecycleService.isRecoverable(existing)) {
                         return buildRecoveryProviderMismatchResponse(existing);
                     }
+                    accountLifecycleService.finalizeExpiredAccount(existing.getUserId());
                 } else {
                     if (existing.getProvider() != null && !"local".equals(existing.getProvider())) {
                         return Map.of(
@@ -118,9 +120,10 @@ public class OAuthAuthService {
         if (byProvider.isPresent()) {
             User existing = byProvider.get();
             if (existing.isDeleted()) {
-                if (!accountLifecycleService.finalizeIfExpired(existing)) {
+                if (accountLifecycleService.isRecoverable(existing)) {
                     throw new GeneralException(ErrorCode.ACCOUNT_RECOVERY_AVAILABLE);
                 }
+                accountLifecycleService.finalizeExpiredAccount(existing.getUserId());
             } else {
                 return buildTokenResponse(existing, SocialLoginResult.LOGIN);
             }
@@ -138,9 +141,10 @@ public class OAuthAuthService {
             if (!existing.isDeleted()) {
                 throw new GeneralException(ErrorCode.DUPLICATE_EMAIL);
             }
-            if (!accountLifecycleService.finalizeIfExpired(existing)) {
+            if (accountLifecycleService.isRecoverable(existing)) {
                 throw new GeneralException(ErrorCode.ACCOUNT_RECOVERY_AVAILABLE);
             }
+            accountLifecycleService.finalizeExpiredAccount(existing.getUserId());
         }
 
         User newUser = createSocialUser(claims, normalizedNickname, email);

@@ -111,6 +111,36 @@ class NotificationServiceTest {
     }
 
     @Test
+    void marksEveryUnreadNotificationAsReadWithBulkUpdate() {
+        when(userRepository.existsById(1L)).thenReturn(true);
+
+        notificationService.markAllAsRead(1L);
+
+        verify(notificationRepository).markAllAsReadByUserId(1L);
+    }
+
+    @Test
+    void reassignsExistingDeviceTokenToCurrentUser() {
+        User previousUser = User.builder().userId(1L).build();
+        User currentUser = User.builder().userId(2L).build();
+        com.hicct3.projectfinder.entity.DeviceToken token =
+                com.hicct3.projectfinder.entity.DeviceToken.builder()
+                        .user(previousUser)
+                        .token("device-token")
+                        .platform("ANDROID")
+                        .createdAt(java.time.LocalDateTime.now().minusDays(1))
+                        .build();
+        when(userRepository.findById(2L)).thenReturn(Optional.of(currentUser));
+        when(deviceTokenRepository.findByToken("device-token")).thenReturn(Optional.of(token));
+
+        notificationService.registerDeviceToken(2L, "device-token", "IOS");
+
+        assertEquals(2L, token.getUser().getUserId());
+        assertEquals("IOS", token.getPlatform());
+        verify(deviceTokenRepository, never()).save(any());
+    }
+
+    @Test
     void rejectsNotificationOwnedByAnotherUser() {
         when(notificationRepository.findByIdAndUser_UserId(10L, 1L))
                 .thenReturn(Optional.empty());

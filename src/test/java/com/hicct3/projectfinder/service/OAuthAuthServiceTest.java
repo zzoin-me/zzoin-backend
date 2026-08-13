@@ -217,7 +217,7 @@ class OAuthAuthServiceTest {
                 .build();
         when(userRepository.findByProviderAndProviderId("kakao", "kakao-id"))
                 .thenReturn(Optional.of(withdrawnUser));
-        when(accountLifecycleService.finalizeIfExpired(withdrawnUser)).thenReturn(false);
+        when(accountLifecycleService.isRecoverable(withdrawnUser)).thenReturn(true);
         when(jwtProvider.createAccountRecoveryToken(7L)).thenReturn("recovery-token");
 
         Map<String, Object> result = oAuthAuthService.processSocialLogin(attributes);
@@ -252,7 +252,7 @@ class OAuthAuthServiceTest {
                 .thenReturn(Optional.empty());
         when(userRepository.findByAnyEmail("member@example.com"))
                 .thenReturn(Optional.of(withdrawnKakaoUser));
-        when(accountLifecycleService.finalizeIfExpired(withdrawnKakaoUser)).thenReturn(false);
+        when(accountLifecycleService.isRecoverable(withdrawnKakaoUser)).thenReturn(true);
 
         Map<String, Object> result = oAuthAuthService.processSocialLogin(attributes);
 

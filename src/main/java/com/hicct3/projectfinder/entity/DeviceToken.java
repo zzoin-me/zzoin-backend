@@ -32,4 +32,10 @@ public class DeviceToken {
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
+
+    public void reassign(User nextUser, String nextPlatform, LocalDateTime reassignedAt) {
+        this.user = nextUser;
+        this.platform = nextPlatform;
+        this.createdAt = reassignedAt;
+    }
 }

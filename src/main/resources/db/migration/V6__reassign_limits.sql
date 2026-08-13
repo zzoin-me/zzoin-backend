@@ -1,0 +1,14 @@
+ALTER TABLE users
+    MODIFY COLUMN nick_name VARCHAR(20) NOT NULL;
+
+ALTER TABLE users
+    MODIFY COLUMN bio VARCHAR(500) NULL;
+
+ALTER TABLE projects
+    MODIFY COLUMN description VARCHAR(500) NOT NULL;
+
+ALTER TABLE project_applications
+    MODIFY COLUMN letter VARCHAR(500) NOT NULL;
+
+ALTER TABLE project_questions
+    MODIFY COLUMN options TEXT NULL;
