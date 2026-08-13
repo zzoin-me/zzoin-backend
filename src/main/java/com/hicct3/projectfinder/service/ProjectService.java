@@ -137,6 +137,20 @@ public class ProjectService {
         projectQuestionRepository.saveAll(questions);
     }
 
+    private void replaceQuestions(Project project, List<CreateQuestionRequestDTO> requests) {
+        if (projectApplicationRepository.existsByProject(project)) {
+            throw new GeneralException(ErrorCode.PROJECT_QUESTIONS_EDIT_LOCKED);
+        }
+
+        LocalDateTime deletedAt = LocalDateTime.now(clock);
+        List<ProjectQuestion> existingQuestions = projectQuestionRepository
+                .findAllByProjectAndDeletedAtIsNullOrderByIdAsc(project);
+        existingQuestions.forEach(question -> question.setDeletedAt(deletedAt));
+        projectQuestionRepository.saveAll(existingQuestions);
+
+        createQuestions(project, requests);
+    }
+
 
 
     //프로젝트 수정
@@ -195,6 +209,11 @@ public class ProjectService {
         if(req.getRecruitments() != null)
         {
             recruitmentService.updateRecruitments(project, req.getRecruitments());
+        }
+
+        if(req.getQuestions() != null)
+        {
+            replaceQuestions(project, req.getQuestions());
         }
     }
 

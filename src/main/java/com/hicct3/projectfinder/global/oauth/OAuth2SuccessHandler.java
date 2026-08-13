@@ -45,7 +45,12 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         String redirectUrl = switch (resultType) {
             case LOGIN -> buildTokenUrl("/auth/callback", result, false);
-            case SIGNUP -> buildTokenUrl("/auth/callback", result, true);
+            case SIGNUP -> UriComponentsBuilder.fromUriString(frontRedirectBase + "/social-signup")
+                    .queryParam("signupToken", result.get("signupToken"))
+                    .queryParam("provider", result.get("provider"))
+                    .queryParam("email", result.get("email"))
+                    .queryParam("suggestedNickname", result.get("suggestedNickname"))
+                    .build().encode().toUriString();
             case NEED_LINK -> UriComponentsBuilder.fromUriString(frontRedirectBase + "/link-account")
                     .queryParam("tempToken", result.get("tempToken"))
                     .queryParam("provider", result.get("provider"))

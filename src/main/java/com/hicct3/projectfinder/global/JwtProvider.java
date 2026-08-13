@@ -18,6 +18,7 @@ public class JwtProvider {
     private final long LOGIN_TOKEN_VALIDITY = 1000L * 60 * 60;
     private final long REFRESH_TOKEN_VALIDITY = 1000L * 60 * 60 * 24 * 14;
     private final long SIGNUP_TOKEN_VALIDITY = 1000L * 60 * 10;
+    private final long SOCIAL_SIGNUP_TOKEN_VALIDITY = 1000L * 60 * 30;
 
 
     public JwtProvider(@Value("${jwt.secret}") String secret) {
@@ -47,6 +48,32 @@ public class JwtProvider {
                 .claim("provider", provider)
                 .claim("provider_id", providerId)
                 .claim("profile_image_url", profileImageUrl == null ? "" : profileImageUrl)
+                .issuedAt(now)
+                .expiration(expiration)
+                .signWith(key)
+                .compact();
+    }
+
+    public String createSocialSignupToken(
+            String email,
+            String provider,
+            String providerId,
+            String suggestedNickname,
+            String profileImageUrl,
+            Boolean emailVerified
+    ) {
+        Date now = new Date();
+        Date expiration = new Date(now.getTime() + SOCIAL_SIGNUP_TOKEN_VALIDITY);
+
+        return Jwts.builder()
+                .subject(providerId)
+                .claim("token_type", "SOCIAL_SIGNUP")
+                .claim("email", email == null ? "" : email)
+                .claim("provider", provider)
+                .claim("provider_id", providerId)
+                .claim("suggested_nickname", suggestedNickname == null ? "" : suggestedNickname)
+                .claim("profile_image_url", profileImageUrl == null ? "" : profileImageUrl)
+                .claim("email_verified", Boolean.TRUE.equals(emailVerified))
                 .issuedAt(now)
                 .expiration(expiration)
                 .signWith(key)
@@ -99,11 +126,38 @@ public class JwtProvider {
         );
     }
 
+    public SocialSignupClaims verifySocialSignupToken(String token) {
+        Claims claims = getClaims(token);
+
+        if (!"SOCIAL_SIGNUP".equals(claims.get("token_type"))) {
+            throw new GeneralException(ErrorCode.INVALID_TOKEN);
+        }
+
+        return new SocialSignupClaims(
+                claims.get("email", String.class),
+                claims.get("provider", String.class),
+                claims.get("provider_id", String.class),
+                claims.get("suggested_nickname", String.class),
+                claims.get("profile_image_url", String.class),
+                claims.get("email_verified", Boolean.class)
+        );
+    }
+
     public record SocialLinkClaims(
             String email,
             String provider,
             String providerId,
             String profileImageUrl
+    ) {
+    }
+
+    public record SocialSignupClaims(
+            String email,
+            String provider,
+            String providerId,
+            String suggestedNickname,
+            String profileImageUrl,
+            Boolean emailVerified
     ) {
     }
 

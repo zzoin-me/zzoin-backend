@@ -117,6 +117,7 @@ public enum ErrorCode {
     APPLICATION_DECISION_CLOSED(HttpStatus.BAD_REQUEST, "진행 중이거나 완료된 프로젝트의 지원자는 처리할 수 없습니다."),
 
     // Questions
+    PROJECT_QUESTIONS_EDIT_LOCKED(HttpStatus.BAD_REQUEST, "지원 이력이 있는 프로젝트의 추가 질문은 수정할 수 없습니다."),
     QUESTION_NOT_FOUND(HttpStatus.BAD_REQUEST, "프로젝트에 존재하지 않는 질문입니다."),
     QUESTION_ANSWER_REQUIRED(HttpStatus.BAD_REQUEST, "필수 질문에 답변해야 합니다."),
     QUESTION_ANSWER_DUPLICATE(HttpStatus.BAD_REQUEST, "같은 질문에 중복으로 답변할 수 없습니다."),

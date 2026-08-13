@@ -119,6 +119,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/signup").permitAll()
                         .requestMatchers("/api/auth/signup/email/send").permitAll()
                         .requestMatchers("/api/auth/signup/email/verify").permitAll()
+                        .requestMatchers("/api/auth/social-signup").permitAll()
                         .requestMatchers("/api/auth/refreshToken").permitAll()
                         .requestMatchers("/api/auth/link-account").permitAll()
                         .requestMatchers("/oauth2/**", "/login/**").permitAll()

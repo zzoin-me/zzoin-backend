@@ -46,8 +46,9 @@ public class OAuthAuthService {
             return buildTokenResponse(user, SocialLoginResult.LOGIN);
         }
 
-        if (attrs.getEmail() != null && !attrs.getEmail().isBlank()) {
-            String lowerEmail = attrs.getEmail().trim().toLowerCase();
+        String socialEmail = normalizeSocialValue(attrs.getEmail());
+        if (!socialEmail.isBlank()) {
+            String lowerEmail = socialEmail.toLowerCase();
             Optional<User> byEmail = userRepository.findByEmail(lowerEmail);
 
             if (byEmail.isPresent()) {
@@ -99,7 +100,36 @@ public class OAuthAuthService {
             }
         }
 
-        User newUser = createSocialUser(attrs);
+        return buildSocialSignupResponse(attrs, socialEmail);
+    }
+
+    @Transactional
+    public Map<String, Object> completeSocialSignup(String signupToken, String nickName) {
+        JwtProvider.SocialSignupClaims claims = jwtProvider.verifySocialSignupToken(signupToken);
+
+        Optional<User> byProvider = userRepository.findByProviderAndProviderId(
+                claims.provider(),
+                claims.providerId()
+        );
+        if (byProvider.isPresent()) {
+            User existing = byProvider.get();
+            if (existing.isDeleted()) {
+                throw new GeneralException(ErrorCode.USER_WITHDRAWN);
+            }
+            return buildTokenResponse(existing, SocialLoginResult.LOGIN);
+        }
+
+        String normalizedNickname = nickName.trim();
+        if (userRepository.existsByNickName(normalizedNickname)) {
+            throw new GeneralException(ErrorCode.DUPLICATE_NICKNAME);
+        }
+
+        String email = resolveSocialEmail(claims.email(), claims.provider(), claims.providerId());
+        if (userRepository.findByAnyEmail(email).isPresent()) {
+            throw new GeneralException(ErrorCode.DUPLICATE_EMAIL);
+        }
+
+        User newUser = createSocialUser(claims, normalizedNickname, email);
         return buildTokenResponse(newUser, SocialLoginResult.SIGNUP);
     }
 
@@ -125,22 +155,44 @@ public class OAuthAuthService {
         return buildTokenResponse(user, SocialLoginResult.LOGIN);
     }
 
-    private User createSocialUser(OAuth2Attributes attrs) {
-        String lowerEmail = attrs.getEmail() != null ? attrs.getEmail().trim().toLowerCase() : "";
-        String nickname = generateUniqueNickname(attrs);
+    private Map<String, Object> buildSocialSignupResponse(OAuth2Attributes attrs, String socialEmail) {
+        String suggestedNickname = normalizeSocialValue(attrs.getName());
+        String signupToken = jwtProvider.createSocialSignupToken(
+                socialEmail,
+                attrs.getProvider(),
+                attrs.getProviderId(),
+                suggestedNickname,
+                normalizeProfileImageUrl(attrs.getProfileImageUrl()),
+                attrs.getEmailVerified()
+        );
 
-        String socialProfileUrl = normalizeProfileImageUrl(attrs.getProfileImageUrl());
+        return Map.of(
+                "result", SocialLoginResult.SIGNUP,
+                "signupToken", signupToken,
+                "provider", attrs.getProvider(),
+                "email", socialEmail,
+                "suggestedNickname", suggestedNickname
+        );
+    }
+
+    private User createSocialUser(
+            JwtProvider.SocialSignupClaims claims,
+            String nickname,
+            String email
+    ) {
+        String socialProfileUrl = normalizeProfileImageUrl(claims.profileImageUrl());
+        boolean hasProviderEmail = !normalizeSocialValue(claims.email()).isBlank();
         User user = User.builder()
                 .nickName(nickname)
-                .email(lowerEmail.isBlank() ? (attrs.getProvider() + "_" + attrs.getProviderId() + "@social.local") : lowerEmail)
+                .email(email)
                 .password(passwordEncoder.encode(java.util.UUID.randomUUID().toString()))
-                .verified(Boolean.TRUE.equals(attrs.getEmailVerified()))
+                .verified(hasProviderEmail && Boolean.TRUE.equals(claims.emailVerified()))
                 .admin(false)
-                .provider(attrs.getProvider())
-                .providerId(attrs.getProviderId())
+                .provider(claims.provider())
+                .providerId(claims.providerId())
                 .profileUrl(socialProfileUrl)
                 .socialProfileUrl(socialProfileUrl)
-                .nicknameChangedAt(java.time.LocalDateTime.now())
+                .nicknameChangedAt(LocalDateTime.now())
                 .build();
 
         return userRepository.save(user);
@@ -158,21 +210,23 @@ public class OAuthAuthService {
     }
 
     private String normalizeProfileImageUrl(String profileImageUrl) {
-        return profileImageUrl == null || profileImageUrl.isBlank() ? null : profileImageUrl;
+        String normalized = normalizeSocialValue(profileImageUrl);
+        return normalized.isBlank() ? null : normalized;
     }
 
-    private String generateUniqueNickname(OAuth2Attributes attrs) {
-        String base = attrs.getName();
-        if (base == null || base.isBlank()) {
-            base = attrs.getProvider();
+    private String normalizeSocialValue(String value) {
+        if (value == null) {
+            return "";
         }
-        String candidate = base;
-        int suffix = 0;
-        while (userRepository.existsByNickName(candidate)) {
-            suffix++;
-            candidate = base + suffix;
-        }
-        return candidate;
+        String normalized = value.trim();
+        return "null".equalsIgnoreCase(normalized) ? "" : normalized;
+    }
+
+    private String resolveSocialEmail(String email, String provider, String providerId) {
+        String normalizedEmail = normalizeSocialValue(email).toLowerCase();
+        return normalizedEmail.isBlank()
+                ? provider + "_" + providerId + "@social.local"
+                : normalizedEmail;
     }
 
     private Map<String, Object> buildTokenResponse(User user, SocialLoginResult result) {
